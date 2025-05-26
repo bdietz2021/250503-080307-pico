@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_class_d__byte" xml:lang="en-US">
+<title>D_byte Class Reference</title>
+<indexterm><primary>D_byte</primary></indexterm>
+<para>
+
+<para><link linkend="_class_d__byte">D_byte</link> class provides a single object to control a single i/o expander. </para>
+ 
+</para>
+<simplesect>
+    <title>Public Member Functions    </title>
+        <itemizedlist>
+            <listitem><para><link linkend="_class_d__byte_1ad10d1d3ce107e0c04b38c0be1da2a5f4">D_byte</link> (MbedI2C *ptr, int addr)</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__byte_1a2cbfd196d91e2995966b457e501e41ce">W_byte</link> (int mask, int data)</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__byte_1ac5fa7835d38c09ca1963f8487ad4c293">W_bytef</link> ()</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__byte_1a44c680fdbd37f664c263f2115337d21a">R_bytef</link> ()</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__byte_1a793f6a9f0da13cc4268f51b564083226">R_find_changes</link> ()</para>
+</listitem>
+            <listitem><para><anchor xml:id="_class_d__byte_1a89102ccc818a6c57056aa182ed79956a"/><link linkend="_class_d__bit">D_bit</link> * <emphasis role="strong">mbit</emphasis> (<link linkend="_class_d__byte">D_byte</link> *parent, int mask)</para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<section>
+<title>Detailed Description</title>
+
+<para><link linkend="_class_d__byte">D_byte</link> class provides a single object to control a single i/o expander. </para>
+</section>
+<section>
+<title>Constructor &amp; Destructor Documentation</title>
+<anchor xml:id="_class_d__byte_1ad10d1d3ce107e0c04b38c0be1da2a5f4"/><section>
+    <title>D_byte()</title>
+<indexterm><primary>D_byte</primary><secondary>D_byte</secondary></indexterm>
+<indexterm><primary>D_byte</primary><secondary>D_byte</secondary></indexterm>
+<para><computeroutput>D_byte::D_byte (MbedI2C * ptr, int addr)</computeroutput></para>
+<para>Create a new byte for this i/o expander The hardware i/o expander provides four input and four output bits. </para>
+</section>
+</section>
+<section>
+<title>Member Function Documentation</title>
+<anchor xml:id="_class_d__byte_1a44c680fdbd37f664c263f2115337d21a"/><section>
+    <title>R_bytef()</title>
+<indexterm><primary>R_bytef</primary><secondary>D_byte</secondary></indexterm>
+<indexterm><primary>D_byte</primary><secondary>R_bytef</secondary></indexterm>
+<para><computeroutput>int D_byte::R_bytef ( )</computeroutput></para>
+<para>return input bits from last read. Bits are shifted and re-ordered to match the output bits. This means that the bit for switch 1 and led 1 use the same mask. </para>
+</section>
+<anchor xml:id="_class_d__byte_1a793f6a9f0da13cc4268f51b564083226"/><section>
+    <title>R_find_changes()</title>
+<indexterm><primary>R_find_changes</primary><secondary>D_byte</secondary></indexterm>
+<indexterm><primary>D_byte</primary><secondary>R_find_changes</secondary></indexterm>
+<para><computeroutput>int D_byte::R_find_changes ( )</computeroutput></para>
+<para><link linkend="_class_d__byte">D_byte</link> - find which bits changed in this byte. Do this via the four <link linkend="_class_d__bit">D_bit</link> objects in this byte. 
+                <formalpara>
+                    <title>
+Parameters</title>
+                    <para>
+                    <table frame="all">
+                        <tgroup cols="2" align="left" colsep="1" rowsep="1">
+                        <colspec colwidth="1*"/>
+                        <colspec colwidth="4*"/>
+                        <tbody>
+                            <row>
+<entry>in</entry><entry>
+<para>- the changed_in word in the <link linkend="_class_d__byte">D_byte</link> object is compared against the mask in the <link linkend="_class_d__bit">D_bit</link> object. Action - call R_bit and W_bit in the <link linkend="_class_d__bit">D_bit</link> object if appropriate. </para>
+</entry>
+                            </row>
+                        </tbody>
+                        </tgroup>
+                    </table>
+                    </para>
+                </formalpara>
+                </para>
+</section>
+<anchor xml:id="_class_d__byte_1a2cbfd196d91e2995966b457e501e41ce"/><section>
+    <title>W_byte()</title>
+<indexterm><primary>W_byte</primary><secondary>D_byte</secondary></indexterm>
+<indexterm><primary>D_byte</primary><secondary>W_byte</secondary></indexterm>
+<para><computeroutput>void D_byte::W_byte (int addmask, int data_outx)</computeroutput></para>
+<para>Write one bit to i/o expander byte, but do not flush </para>
+</section>
+<anchor xml:id="_class_d__byte_1ac5fa7835d38c09ca1963f8487ad4c293"/><section>
+    <title>W_bytef()</title>
+<indexterm><primary>W_bytef</primary><secondary>D_byte</secondary></indexterm>
+<indexterm><primary>D_byte</primary><secondary>W_bytef</secondary></indexterm>
+<para><computeroutput>void D_byte::W_bytef ( )</computeroutput></para>
+<para>perform hardware write via I2C to write byte to i/o expander. Also reads input bytes and saves in byte object. W_bytef is called by <link linkend="_class_d__io_1a937acf445059d43345191323c5b8bf34">D_io::W_wordf</link> to flush all bytes. </para>
+</section>
+<para>
+The documentation for this class was generated from the following file:</para>
+panel-firmware-test.cpp</section>
+</section>

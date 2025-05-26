@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_class_d__reg" xml:lang="en-US">
+<title>D_reg Class Reference</title>
+<indexterm><primary>D_reg</primary></indexterm>
+<para>
+
+<para>class <link linkend="_class_d__reg">D_reg</link> provides a single object for a front panel register This is the single 16-bit register displayed on the top row of LEDs. (It can also be used to test the bottom 16 LEDs.) </para>
+ 
+</para>
+<simplesect>
+    <title>Public Member Functions    </title>
+        <itemizedlist>
+            <listitem><para>void <link linkend="_class_d__reg_1a2ce95894296e0db7cbc1ba5197402854">D_reg_addbit</link> (<link linkend="_class_d__bit">D_bit</link> *xnew)</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__reg_1a860c7faa8adbdb1f1291bd29e5463a9f">D_reg_end_bits</link> ()</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__reg_1a3bd63f84ac8fbded566dd17c5d1014c1">D_reg_write_word</link> (int in)</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__reg_1a0f36c52f8a52691c603ab62fedc0f523">D_reg_read_word</link> ()</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__reg_1a2e7f44d02a2a692de2446d1bc91bbbf9">R_bit</link> (int, int)</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__reg_1a3b0428f7fa03119077057c508e9aca7b">BN_changed_bit</link> (int)</para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<simplesect>
+    <title>Public Attributes    </title>
+        <itemizedlist>
+            <listitem><para><link linkend="_class_d__bit">D_bit</link> * <link linkend="_class_d__reg_1a9ad54e34c8b703ac05860e97bc81a89b">regptr</link> [32]</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__reg_1a740634f35a4a86f16231b60f552087bb">size</link></para>
+</listitem>
+            <listitem><para>long <link linkend="_class_d__reg_1ad9d3f2438103f5d9f944d449df7c0141">value</link></para>
+</listitem>
+            <listitem><para><anchor xml:id="_class_d__reg_1a80adcd3002a87a3087deb403d0b39f7c"/>long <emphasis role="strong">old_value</emphasis></para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__reg_1a6a8d7518984c263a597b527fad550cec">change_flag</link></para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<section>
+<title>Detailed Description</title>
+
+<para>class <link linkend="_class_d__reg">D_reg</link> provides a single object for a front panel register This is the single 16-bit register displayed on the top row of LEDs. (It can also be used to test the bottom 16 LEDs.) </para>
+</section>
+<section>
+<title>Member Function Documentation</title>
+<anchor xml:id="_class_d__reg_1a3b0428f7fa03119077057c508e9aca7b"/><section>
+    <title>BN_changed_bit()</title>
+<indexterm><primary>BN_changed_bit</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>BN_changed_bit</secondary></indexterm>
+<para><computeroutput>int D_reg::BN_changed_bit (int )<computeroutput>[inline]</computeroutput></computeroutput></para>
+<para>XXX needs work </para>
+</section>
+<anchor xml:id="_class_d__reg_1a2ce95894296e0db7cbc1ba5197402854"/><section>
+    <title>D_reg_addbit()</title>
+<indexterm><primary>D_reg_addbit</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>D_reg_addbit</secondary></indexterm>
+<para><computeroutput>void D_reg::D_reg_addbit (<link linkend="_class_d__bit">D_bit</link> * xnew)</computeroutput></para>
+<para>D_reg_addbit - creates a new instance of <link linkend="_class_d__bit">D_bit</link> object and adds to register </para>
+</section>
+<anchor xml:id="_class_d__reg_1a860c7faa8adbdb1f1291bd29e5463a9f"/><section>
+    <title>D_reg_end_bits()</title>
+<indexterm><primary>D_reg_end_bits</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>D_reg_end_bits</secondary></indexterm>
+<para><computeroutput>void D_reg::D_reg_end_bits ( )</computeroutput></para>
+<para>D_reg_addbit call this object after all bits are added to register </para>
+</section>
+<anchor xml:id="_class_d__reg_1a0f36c52f8a52691c603ab62fedc0f523"/><section>
+    <title>D_reg_read_word()</title>
+<indexterm><primary>D_reg_read_word</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>D_reg_read_word</secondary></indexterm>
+<para><computeroutput>int D_reg::D_reg_read_word ( )</computeroutput></para>
+<para>return register value </para>
+</section>
+<anchor xml:id="_class_d__reg_1a3bd63f84ac8fbded566dd17c5d1014c1"/><section>
+    <title>D_reg_write_word()</title>
+<indexterm><primary>D_reg_write_word</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>D_reg_write_word</secondary></indexterm>
+<para><computeroutput>void D_reg::D_reg_write_word (int in)</computeroutput></para>
+<para>write register using <link linkend="_class_d__byte">D_byte</link> objects </para>
+</section>
+<anchor xml:id="_class_d__reg_1a2e7f44d02a2a692de2446d1bc91bbbf9"/><section>
+    <title>R_bit()</title>
+<indexterm><primary>R_bit</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>R_bit</secondary></indexterm>
+<para><computeroutput>int D_reg::R_bit (int in, int bitno)</computeroutput></para>
+<para>XXX needs work </para>
+</section>
+</section>
+<section>
+<title>Member Data Documentation</title>
+<anchor xml:id="_class_d__reg_1a6a8d7518984c263a597b527fad550cec"/><section>
+    <title>change_flag</title>
+<indexterm><primary>change_flag</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>change_flag</secondary></indexterm>
+<para><computeroutput>int D_reg::change_flag</computeroutput></para>
+<para>flag if value has changed and needs output </para>
+</section>
+<anchor xml:id="_class_d__reg_1a9ad54e34c8b703ac05860e97bc81a89b"/><section>
+    <title>regptr</title>
+<indexterm><primary>regptr</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>regptr</secondary></indexterm>
+<para><computeroutput><link linkend="_class_d__bit">D_bit</link>* D_reg::regptr[32]</computeroutput></para>
+<para>pointers to the <link linkend="_class_d__bit">D_bit</link> objects that make up the register. </para>
+</section>
+<anchor xml:id="_class_d__reg_1a740634f35a4a86f16231b60f552087bb"/><section>
+    <title>size</title>
+<indexterm><primary>size</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>size</secondary></indexterm>
+<para><computeroutput>int D_reg::size</computeroutput></para>
+<para>size - number of bits in front panel reg (16) size - normally 16 bits (unless testing). </para>
+</section>
+<anchor xml:id="_class_d__reg_1ad9d3f2438103f5d9f944d449df7c0141"/><section>
+    <title>value</title>
+<indexterm><primary>value</primary><secondary>D_reg</secondary></indexterm>
+<indexterm><primary>D_reg</primary><secondary>value</secondary></indexterm>
+<para><computeroutput>long D_reg::value</computeroutput></para>
+<para>register current contents </para>
+</section>
+<para>
+The documentation for this class was generated from the following file:</para>
+panel-firmware-test.cpp</section>
+</section>

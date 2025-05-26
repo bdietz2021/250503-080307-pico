@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_annotated" xml:lang="en-US">
+<title>Class List</title>
+Here are the classes, structs, unions and interfaces with brief descriptions:<link linkend="_class_d__bit">D_bit</link>
+<para><link linkend="_class_d__bit">D_bit</link> class provides an object to control a single i/o bit </para>
+<link linkend="_class_d__button">D_button</link>
+<para><link linkend="_class_d__button">D_button</link> is a base class for all single button input parent - pointer to <link linkend="_class_d__bit">D_bit</link> object </para>
+<link linkend="_class_d__byte">D_byte</link>
+<para><link linkend="_class_d__byte">D_byte</link> class provides a single object to control a single i/o expander </para>
+<link linkend="_class_d__clear">D_clear</link>
+<para>Class <link linkend="_class_d__clear">D_clear</link> provides an object for the front panel &quot;clear&quot; button </para>
+<link linkend="_class_d__io">D_io</link>
+<para><link linkend="_class_d__io">D_io</link> class provides a single object to controll both/all I2C busses and all i/o expanders on the front panel </para>
+<link linkend="_class_d__reg">D_reg</link>
+<para>Class <link linkend="_class_d__reg">D_reg</link> provides a single object for a front panel register This is the single 16-bit register displayed on the top row of LEDs. (It can also be used to test the bottom 16 LEDs.) </para>
+<link linkend="_classusbio">usbio</link>
+<para>Class usbio provides keyboard input from the host computer. This is not a very sophisticatd class </para>
+</section>

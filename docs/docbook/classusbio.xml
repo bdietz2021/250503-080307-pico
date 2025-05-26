@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_classusbio" xml:lang="en-US">
+<title>usbio Class Reference</title>
+<indexterm><primary>usbio</primary></indexterm>
+<para>
+
+<para>class usbio provides keyboard input from the host computer. This is not a very sophisticatd class. </para>
+ 
+</para>
+<simplesect>
+    <title>Public Member Functions    </title>
+        <itemizedlist>
+            <listitem><para><anchor xml:id="_classusbio_1ace542eda9f99c0bf19ba6edf08eeb5af"/>int <emphasis role="strong">in_available</emphasis> ()</para>
+</listitem>
+            <listitem><para><anchor xml:id="_classusbio_1ac0f797631a6feab7fa453b8d94d97054"/>int <emphasis role="strong">in_char</emphasis> ()</para>
+</listitem>
+            <listitem><para><anchor xml:id="_classusbio_1a7cdc6486fa3f603d9ee108b2c5e05700"/>int <emphasis role="strong">out_char</emphasis> ()</para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<simplesect>
+    <title>Public Attributes    </title>
+        <itemizedlist>
+            <listitem><para><anchor xml:id="_classusbio_1a418933401f0172ddaef29824e3a3c389"/>int <emphasis role="strong">inCharx</emphasis></para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<section>
+<title>Detailed Description</title>
+
+<para>class usbio provides keyboard input from the host computer. This is not a very sophisticatd class. </para>
+<para>
+The documentation for this class was generated from the following file:</para>
+panel-firmware-test.cpp</section>
+</section>

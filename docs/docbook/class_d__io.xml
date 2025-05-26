@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_class_d__io" xml:lang="en-US">
+<title>D_io Class Reference</title>
+<indexterm><primary>D_io</primary></indexterm>
+<para>
+
+<para><link linkend="_class_d__io">D_io</link> class provides a single object to controll both/all I2C busses and all i/o expanders on the front panel. </para>
+ 
+</para>
+<simplesect>
+    <title>Public Member Functions    </title>
+        <itemizedlist>
+            <listitem><para><link linkend="_class_d__io_1a8c09f2c7f397ffa93f5f77af8d35d4de">D_io</link> ()</para>
+</listitem>
+            <listitem><para><link linkend="_class_d__byte">D_byte</link> * <link linkend="_class_d__io_1acc99dd90b3900d223e9ff60537fb826b">make</link> (MbedI2C *, int)</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__io_1a937acf445059d43345191323c5b8bf34">W_wordf</link> ()</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__io_1a9ba4cf2cf1db7ed15fbd5a422f34a07b">R_scan</link> ()</para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<section>
+<title>Detailed Description</title>
+
+<para><link linkend="_class_d__io">D_io</link> class provides a single object to controll both/all I2C busses and all i/o expanders on the front panel. </para>
+
+
+
+<para>
+                <formalpara>
+                    <title>
+Parameters</title>
+                    <para>
+                    <table frame="all">
+                        <tgroup cols="2" align="left" colsep="1" rowsep="1">
+                        <colspec colwidth="1*"/>
+                        <colspec colwidth="4*"/>
+                        <tbody>
+                            <row>
+<entry><link linkend="_class_d__byte">D_byte</link></entry><entry>
+<para>class provides one object to control a single i/o expander </para>
+</entry>
+                            </row>
+                        </tbody>
+                        </tgroup>
+                    </table>
+                    </para>
+                </formalpara>
+                </para>
+</section>
+<section>
+<title>Constructor &amp; Destructor Documentation</title>
+<anchor xml:id="_class_d__io_1a8c09f2c7f397ffa93f5f77af8d35d4de"/><section>
+    <title>D_io()</title>
+<indexterm><primary>D_io</primary><secondary>D_io</secondary></indexterm>
+<indexterm><primary>D_io</primary><secondary>D_io</secondary></indexterm>
+<para><computeroutput>D_io::D_io ( )</computeroutput></para>
+<para>Random, uncategorized multi-line comment in <link linkend="_class_d__io">D_io</link> construct or method. </para>
+</section>
+</section>
+<section>
+<title>Member Function Documentation</title>
+<anchor xml:id="_class_d__io_1acc99dd90b3900d223e9ff60537fb826b"/><section>
+    <title>make()</title>
+<indexterm><primary>make</primary><secondary>D_io</secondary></indexterm>
+<indexterm><primary>D_io</primary><secondary>make</secondary></indexterm>
+<para><computeroutput><link linkend="_class_d__byte">D_byte</link> * D_io::make (MbedI2C * bus, int addr)</computeroutput></para>
+<para>Create <link linkend="_class_d__byte">D_byte</link> object and add to <link linkend="_class_d__io">D_io</link> object. This is how <link linkend="_class_d__io">D_io</link> can control all bytes. </para>
+</section>
+<anchor xml:id="_class_d__io_1a9ba4cf2cf1db7ed15fbd5a422f34a07b"/><section>
+    <title>R_scan()</title>
+<indexterm><primary>R_scan</primary><secondary>D_io</secondary></indexterm>
+<indexterm><primary>D_io</primary><secondary>R_scan</secondary></indexterm>
+<para><computeroutput>int D_io::R_scan ( )</computeroutput></para>
+<para><link linkend="_class_d__io_1a9ba4cf2cf1db7ed15fbd5a422f34a07b">D_io::R_scan</link> checks each byte for changes by calling <link linkend="_class_d__byte_1a793f6a9f0da13cc4268f51b564083226">D_byte::R_find_changes</link>. </para>
+</section>
+<anchor xml:id="_class_d__io_1a937acf445059d43345191323c5b8bf34"/><section>
+    <title>W_wordf()</title>
+<indexterm><primary>W_wordf</primary><secondary>D_io</secondary></indexterm>
+<indexterm><primary>D_io</primary><secondary>W_wordf</secondary></indexterm>
+<para><computeroutput>void D_io::W_wordf ( )</computeroutput></para>
+<para>Flush all <link linkend="_class_d__byte">D_byte</link> objects by writing values to i/o expander hw </para>
+</section>
+<para>
+The documentation for this class was generated from the following file:</para>
+panel-firmware-test.cpp</section>
+</section>

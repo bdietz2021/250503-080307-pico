@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<section xmlns="http://docbook.org/ns/docbook" version="5.0" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="_class_d__bit" xml:lang="en-US">
+<title>D_bit Class Reference</title>
+<indexterm><primary>D_bit</primary></indexterm>
+<para>
+
+<para><link linkend="_class_d__bit">D_bit</link> class provides an object to control a single i/o bit. </para>
+ 
+</para>
+<simplesect>
+    <title>Public Member Functions    </title>
+        <itemizedlist>
+            <listitem><para><link linkend="_class_d__bit_1a609a8382194849de609296579a7f5963">D_bit</link> (<link linkend="_class_d__byte">D_byte</link> *<link linkend="_class_d__bit_1ab62f34016481ea46a2ebb4bcd970be78">parent</link>, int <link linkend="_class_d__bit_1a2a38fa4db20c7a8d78e9776cbaa3bf0a">mask</link>)</para>
+</listitem>
+            <listitem><para>void <link linkend="_class_d__bit_1a440708c8f4d2df03b611d81fc1bcf543">W_bit</link> (int bitno, int <link linkend="_class_d__bit_1a2a38fa4db20c7a8d78e9776cbaa3bf0a">mask</link>)</para>
+</listitem>
+            <listitem><para><anchor xml:id="_class_d__bit_1ad4f15db1b79437b09f536e2b573d64bb"/>virtual int <emphasis role="strong">R_bit</emphasis> (int, int)</para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__bit_1a0448311b0f1bb3c75812b24c5830ec62">R_changed_bit</link> (int data)</para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<simplesect>
+    <title>Public Attributes    </title>
+        <itemizedlist>
+            <listitem><para><link linkend="_class_d__byte">D_byte</link> * <link linkend="_class_d__bit_1ab62f34016481ea46a2ebb4bcd970be78">parent</link></para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__bit_1ac98f7db4ee6794e4e25fb91e836f4f00">bit_no_in_byte</link></para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__bit_1a2a38fa4db20c7a8d78e9776cbaa3bf0a">mask</link></para>
+</listitem>
+            <listitem><para><link linkend="_class_d__reg">D_reg</link> * <link linkend="_class_d__bit_1af97155c7f82c3bcbb6ec98c97d79d48a">D_reg_link</link></para>
+</listitem>
+            <listitem><para>int <link linkend="_class_d__bit_1a0fbf4e7e606d6e25f145f3b0cf3be545">D_reg_bitno</link></para>
+</listitem>
+        </itemizedlist>
+</simplesect>
+<section>
+<title>Detailed Description</title>
+
+<para><link linkend="_class_d__bit">D_bit</link> class provides an object to control a single i/o bit. </para>
+
+
+
+<para>
+                <formalpara>
+                    <title>
+Parameters</title>
+                    <para>
+                    <table frame="all">
+                        <tgroup cols="2" align="left" colsep="1" rowsep="1">
+                        <colspec colwidth="1*"/>
+                        <colspec colwidth="4*"/>
+                        <tbody>
+                            <row>
+<entry>in</entry><entry>
+<para><link linkend="_class_d__byte">D_byte</link> parent - pointer to the i/o expander byte. </para>
+</entry>
+                            </row>
+                        </tbody>
+                        </tgroup>
+                    </table>
+                    </para>
+                </formalpara>
+                </para>
+</section>
+<section>
+<title>Constructor &amp; Destructor Documentation</title>
+<anchor xml:id="_class_d__bit_1a609a8382194849de609296579a7f5963"/><section>
+    <title>D_bit()</title>
+<indexterm><primary>D_bit</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>D_bit</secondary></indexterm>
+<para><computeroutput>D_bit::D_bit (<link linkend="_class_d__byte">D_byte</link> * parent, int mask)</computeroutput></para>
+<para>constructor: parameters are <link linkend="_class_d__byte">D_byte</link> and bit mask </para>
+</section>
+</section>
+<section>
+<title>Member Function Documentation</title>
+<anchor xml:id="_class_d__bit_1a0448311b0f1bb3c75812b24c5830ec62"/><section>
+    <title>R_changed_bit()</title>
+<indexterm><primary>R_changed_bit</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>R_changed_bit</secondary></indexterm>
+<para><computeroutput>int D_bit::R_changed_bit (int data)</computeroutput></para>
+<para>method to update one bit in the <link linkend="_class_d__reg">D_reg</link> object This is experimental and may be half-baked. </para>
+</section>
+<anchor xml:id="_class_d__bit_1a440708c8f4d2df03b611d81fc1bcf543"/><section>
+    <title>W_bit()</title>
+<indexterm><primary>W_bit</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>W_bit</secondary></indexterm>
+<para><computeroutput>void D_bit::W_bit (int bitno, int output_bit)</computeroutput></para>
+<para><link linkend="_class_d__bit">D_bit</link> object routine to write one bit via the <link linkend="_class_d__byte">D_byte</link> parent </para>
+</section>
+</section>
+<section>
+<title>Member Data Documentation</title>
+<anchor xml:id="_class_d__bit_1ac98f7db4ee6794e4e25fb91e836f4f00"/><section>
+    <title>bit_no_in_byte</title>
+<indexterm><primary>bit_no_in_byte</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>bit_no_in_byte</secondary></indexterm>
+<para><computeroutput>int D_bit::bit_no_in_byte</computeroutput></para>
+<para>bit_no_in_byte - bit number in the i/o expander byte. </para>
+</section>
+<anchor xml:id="_class_d__bit_1a0fbf4e7e606d6e25f145f3b0cf3be545"/><section>
+    <title>D_reg_bitno</title>
+<indexterm><primary>D_reg_bitno</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>D_reg_bitno</secondary></indexterm>
+<para><computeroutput>int D_bit::D_reg_bitno</computeroutput></para>
+<para>D_reg_bitno - bit number in the front panel register (LSB=0) or button. </para>
+</section>
+<anchor xml:id="_class_d__bit_1af97155c7f82c3bcbb6ec98c97d79d48a"/><section>
+    <title>D_reg_link</title>
+<indexterm><primary>D_reg_link</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>D_reg_link</secondary></indexterm>
+<para><computeroutput><link linkend="_class_d__reg">D_reg</link>* D_bit::D_reg_link</computeroutput></para>
+<para>D_reg_link - pointer to front panel register or button </para>
+</section>
+<anchor xml:id="_class_d__bit_1a2a38fa4db20c7a8d78e9776cbaa3bf0a"/><section>
+    <title>mask</title>
+<indexterm><primary>mask</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>mask</secondary></indexterm>
+<para><computeroutput>int D_bit::mask</computeroutput></para>
+<para>mask - bit field in byte </para>
+</section>
+<anchor xml:id="_class_d__bit_1ab62f34016481ea46a2ebb4bcd970be78"/><section>
+    <title>parent</title>
+<indexterm><primary>parent</primary><secondary>D_bit</secondary></indexterm>
+<indexterm><primary>D_bit</primary><secondary>parent</secondary></indexterm>
+<para><computeroutput><link linkend="_class_d__byte">D_byte</link>* D_bit::parent</computeroutput></para>
+<para>parent - link to i/o expander register <link linkend="_class_d__byte">D_byte</link>. </para>
+</section>
+<para>
+The documentation for this class was generated from the following file:</para>
+panel-firmware-test.cpp</section>
+</section>
