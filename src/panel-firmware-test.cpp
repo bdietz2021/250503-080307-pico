@@ -36,6 +36,8 @@
 //  05/22/2025 - continue changes for "clear" button
 //  05/23/2025 - add support for "clear" button
 //  05/26/2025 - cmd "c" works w/o clear defined
+//  05/27/2025 - moved some function to D_base
+//  05/28/2025 - D_clear button works - at least prints msg
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -69,7 +71,7 @@ using namespace std;
 #include <Wire.h>
 // #define WIRE Wire  // not needed for two I2C busses
 #define DEBUGX 0
-// #define CLEAR 1  // define to use the clear button object
+#define CLEAR 1 // define to use the clear button object
 
 arduino::MbedI2C xwire0(I2C_SDA, I2C_SCL);
 arduino::MbedI2C xwire1((uint8_t)6, (uint8_t)7);
@@ -81,7 +83,18 @@ static int rev4[16] = {0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,
 
 class D_byte;
 class D_bit;
+class D_base;
 class D_reg;
+
+int xouch()
+{
+  int i;
+  Serial.println("Xouch!");
+  while (1)
+    ;
+  return (0);
+};
+
 /**
  * @brief D_io class provides a single object to controll both/all I2C busses
  *       and all i/o expanders on the front panel.
@@ -126,6 +139,7 @@ private:
   int data_in;       // last value read from hw
   int previous_in;   // previous input to find changes
   int changed_in;    // bit mask for changes
+  int defined_bits;  // set only for bits in use
   int change_flag;   // mark when changed for output
   D_bit *D_bits[16]; // pointer to bits in this byte
   int junk;          // scratch variable
@@ -151,7 +165,7 @@ public:
   /** mask - bit field in byte   */
   int mask;
   /** D_reg_link - pointer to front panel register or button */
-  D_reg *D_reg_link; // pointer to front panel register or button
+  D_base *D_reg_link; // pointer to front panel register or button
   /** D_reg_bitno - bit number in the front panel register (LSB=0) or button. */
   int D_reg_bitno; // bit no in front panel panel reg (LSB=0) or button
 
@@ -161,11 +175,28 @@ public:
   int R_changed_bit(int data); // process a changed bit
 };
 
+/** D_base base class for front panel registers and buttons */
+class D_base
+{
+public:
+  D_bit *parent;  // pointer to D_byte object
+  long value;     // latest value
+  long old_value; // previous value
+  int D_reg_bitno;
+  D_base *D_reg_link;
+  // virtual int action(); // execute when the bit changes
+  // virtual int clear();  // reset value
+  virtual int R_bit(int);
+  virtual int W_bit(int, int) { return (0); };
+
+  virtual int BN_changed_bit(int) { return (0); }; // test
+};
+
 //  class D_button - base class for all single button input
 /** @brief D_button is a base class for all single button input
  * parent - pointer to D_bit object
  */
-class D_button
+class D_button : public D_base
 {
 public:
   D_bit *parent; // pointer to D_bit object
@@ -181,7 +212,7 @@ private:
  *  (It can also be used to test the bottom 16 LEDs.)
  */
 
-class D_reg
+class D_reg : D_base
 { // front panel register - consists of bits - PUBLIC is needed
 public:
   D_reg()
@@ -224,7 +255,12 @@ public:
   D_clear(D_bit *xparent)
   {
     parent = xparent;
-    Serial.println("D_button constructor");
+    Serial.println("D_clear constructor");
+  }
+  int R_bit(int in)
+  {
+    Serial.println("D_clear::R_bit");
+    return (0);
   }
   // int BN_changed_bit(int ) {return(0);};  // test
 };
@@ -269,16 +305,17 @@ D_byte::D_byte(MbedI2C *ptr, int addr)
   junk = i2c_bus->write(0xf0); // set high 4 bits into input mode
   i2c_bus->endTransmission();
   data_out = 0;
-  data_in = 0;
+  data_in = 0xff;
   previous_in = 0;
   changed_in = 0;
+  defined_bits = 0; // no bits defined yet
 };
 
 /** Write one bit to i/o expander byte, but do not flush
- * 
+ *
  */
- void D_byte::W_byte(int addmask, int data_outx)
-{ 
+void D_byte::W_byte(int addmask, int data_outx)
+{
   if (DEBUGX)
     Serial.print("W_byte: ");
   if (DEBUGX)
@@ -288,7 +325,7 @@ D_byte::D_byte(MbedI2C *ptr, int addr)
 };
 /** return input bits from last read.
  * Bits are shifted and re-ordered to match the output bits.
- * This means that the bit for switch 1 and led 1 use the same mask. 
+ * This means that the bit for switch 1 and led 1 use the same mask.
  */
 int D_byte::R_bytef()
 { // return last input bits (shifted)
@@ -298,11 +335,12 @@ int D_byte::R_bytef()
 };
 
 /** perform hardware write via I2C to write byte to i/o expander.
- *  Also reads input bytes and saves in byte object. 
+ *  Also reads input bytes and saves in byte object.
  * W_bytef is called by D_io::W_wordf to flush all bytes.
  */
 void D_byte::W_bytef()
 { // byte flush - write byte to hw/read from hw
+  int work;
   if (DEBUGX)
     Serial.print("W_bytef: ");
   if (DEBUGX)
@@ -321,8 +359,10 @@ void D_byte::W_bytef()
   data_in = i2c_bus->read(); // read new data
   if (((data_in ^ previous_in) & 0xf0) != 0)
   {
-    changed_in = ((((data_in ^ previous_in)) & 0xf0) >> 4); // find changed bits - mask and shift
-    changed_in = rev4[changed_in];                          // reverse bits to match input bit order
+    changed_in = (((data_in ^ previous_in) & 0xf0) >> 4); // find changed bits - mask and shift
+    work = rev4[defined_bits];
+    work = defined_bits;
+    changed_in = rev4[changed_in] & work ;         // reverse bits to match input bit order
 
     Serial.print("W_bytef: in/prev/changed: ");
     Serial.print(i2caddr, HEX);
@@ -338,7 +378,7 @@ void D_byte::W_bytef()
 };
 
 /** Create D_byte object and add to D_io object.
- * This is how D_io can control all bytes. 
+ * This is how D_io can control all bytes.
  */
 D_byte *D_io::make(MbedI2C *bus, int addr)
 { // add the byte register in an i/o expander
@@ -348,9 +388,9 @@ D_byte *D_io::make(MbedI2C *bus, int addr)
   return (temp);
 };
 
-/** Flush all D_byte objects by writing values to i/o expander hw 
- * 
-*/
+/** Flush all D_byte objects by writing values to i/o expander hw
+ *
+ */
 void D_io::W_wordf()
 { // flush out writes to hw
   int i;
@@ -393,11 +433,25 @@ D_bit *D_byte::mbit(D_byte *parentp, int mask)
   D_bit *temp2;
   temp2 = new D_bit(this, mask);
   D_bits[dbit_index++] = temp2;
+  defined_bits |= mask; // define this bit as being used
   return (temp2);
 }
+
+/** R_bit for base class D_base
+ * This is a virtual function to be redefined in subclasses.
+ */
+int D_base::R_bit(int in)
+{
+  Serial.print("D_base::R_bit: ");
+  Serial.print((long unsigned int)this, HEX);
+  Serial.print(" ");
+  Serial.println(in, HEX);
+  return (0);
+};
+
 /** D_byte - find which bits changed in this byte.
  * Do this via the four D_bit objects in this byte.
- * @param in - the changed_in word in the D_byte object is compared 
+ * @param in - the changed_in word in the D_byte object is compared
  * against the mask in the D_bit object.
  * Action - call R_bit and W_bit in the D_bit object if appropriate.
  */
@@ -413,16 +467,16 @@ int D_byte::R_find_changes()
     // Serial.println(changed_in,HEX)
     // Serial.print(changed_in,HEX);
     // Serial.println(" ");
-    if (dbit_index == 0)
+    if (dbit_index == 0) // nothing here, return
       return (0);
     for (i = 0; i < dbit_index; i++)
-    { // scan for changed bit
+    {                                   // scan for changed bit
       if (D_bits[i]->mask & changed_in) // compare bits changed in byte with D_mask.
       {
 
-       // D_bits[i]->D_reg_bitno;  // this bit was changed  NOOP
+        // D_bits[i]->D_reg_bitno;  // this bit was changed  NOOP
         D_bits[i]->R_bit(changed_in); // BJD DEBUG
-        D_bits[i]->W_bit(i, 1);               // Write output bit via byte
+        D_bits[i]->W_bit(i, 1);       // Write output bit via byte
 
         D_bits[i]->R_changed_bit(0); // update registers/buttons using this bit BJD
 
@@ -450,8 +504,11 @@ D_bit::D_bit(D_byte *parentx, int maskx)
 int D_bit::R_bit(int in)
 {
   Serial.print("D_bit::R_bit: ");
-  Serial.print(D_reg_bitno, HEX);
+  Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
+  Serial.println(D_reg_bitno, HEX);
+  if (D_reg_bitno > 33)
+    xouch();
   D_reg_link->R_bit(D_reg_bitno);
   return (0);
 }
@@ -464,15 +521,16 @@ int D_reg::R_bit(int bitno)
   int temp;
 
   Serial.print("D_reg::R_bit: ");
-  Serial.print(bitno, HEX);
+  Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
+  Serial.println(bitno, HEX);
 
   // temp = 0x10000 >> D_reg_bitno;  // note oddball bit position
   // temp = 1 << (size-bitno); // bit no
-  // temp = 1 << bitno; // bit no 
-  temp = (1<<size); // starting point 10000 hex for 16 bit size
-  temp = temp >> (bitno+1);
-  value |= temp;     // update value
+  // temp = 1 << bitno; // bit no
+  temp = (1 << size); // starting point 10000 hex for 16 bit size
+  temp = temp >> (bitno + 1);
+  value |= temp; // update value
   // W_bit(D_reg_bitno,1); // update bit to be output
 
   return (size - bitno); // return bit mask in the byte
@@ -482,7 +540,10 @@ int D_button::R_bit(int in)
 { // set/reset bit in i/o expander sw object
 
   Serial.print("D_button::R_bit: ");
-  Serial.print(in, HEX);
+  Serial.print((long unsigned int)this, HEX);
+  Serial.print(" ");
+  Serial.println(in, HEX);
+
   // Serial.print(" ");
   // Serial.println(D_reg_bitno);
 
@@ -495,7 +556,7 @@ int D_button::R_bit(int in)
 }
 
 /** D_bit object routine to write one bit via the D_byte parent
- * 
+ *
  */
 void D_bit::W_bit(int bitno, int output_bit)
 { // write one bit to object, but don't flush to hw
@@ -539,7 +600,7 @@ void D_reg::D_reg_end_bits()
   int i;
   for (i = 0; i < size; i++)
   {
-    regptr[i]->D_reg_bitno = size - (i+1); // bits numbered 1 to n
+    regptr[i]->D_reg_bitno = size - (i + 1); // bits numbered 1 to n
   }
 };
 
@@ -616,6 +677,7 @@ int usbio::in_char()
   }
   return (-1);
 };
+
 /************************* end of object member functions ************************/
 
 //
@@ -627,7 +689,7 @@ D_byte *dbyte_save;
 D_bit *dbit_save;
 usbio usbio2; // i/o via USB to FrontPanelH316.c
 D_reg *fp_dreg;
-D_clear *fp_clear; // clear button object
+D_base *fp_clear; // clear button object
 
 // D_reg front_panel_reg;
 int display_value = 0;
@@ -708,9 +770,12 @@ void setup()
 //
 #ifdef CLEAR
   dbyte_save = D_io_base->make(&xwire0, 0x21); // make one i/o expander (on SDA, SCL
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  // dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
   //  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register **** BJD DUMMY
-  fp_clear = new D_clear(dbit_save);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save);
+  // dbit_save->D_reg_bitno = 0;
+//
 #endif
 
 /***  define bottom 16 bits */
