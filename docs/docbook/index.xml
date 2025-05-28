@@ -3,15 +3,5 @@
     <info>
     <title>H316-Firmware</title>
     </info>
-<chapter>
-    <title>Class Documentation</title>
-    <xi:include href="class_d__bit.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="class_d__button.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="class_d__byte.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="class_d__clear.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="class_d__io.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="class_d__reg.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-    <xi:include href="classusbio.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
-</chapter>
 <index/>
 </book>
