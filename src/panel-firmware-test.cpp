@@ -37,7 +37,7 @@
 //  05/23/2025 - add support for "clear" button
 //  05/26/2025 - cmd "c" works w/o clear defined
 //  05/27/2025 - moved some function to D_base
-//  05/28/2025 - D_clear button works - at least prints msgx
+//  05/28/2025 - D_clear button works - at least prints msg
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
