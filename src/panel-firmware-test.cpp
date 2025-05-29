@@ -38,6 +38,7 @@
 //  05/26/2025 - cmd "c" works w/o clear defined
 //  05/27/2025 - moved some function to D_base
 //  05/28/2025 - D_clear button works - at least prints msg
+//  05/29/2025 - Start customizing D_clear
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -94,6 +95,8 @@ int xouch()
     ;
   return (0);
 };
+
+void clear_register();
 
 /**
  * @brief D_io class provides a single object to controll both/all I2C busses
@@ -201,7 +204,6 @@ class D_button : public D_base
 public:
   D_bit *parent; // pointer to D_bit object
   int R_bit(int);
-  void xxx();
   int BN_changed_bit(int) { return (0); };
 
 private:
@@ -260,6 +262,8 @@ public:
   int R_bit(int in)
   {
     Serial.println("D_clear::R_bit");
+    Serial.println("clear display register");
+    clear_register(); // clear the display register
     return (0);
   }
   // int BN_changed_bit(int ) {return(0);};  // test
@@ -543,6 +547,7 @@ int D_button::R_bit(int in)
   Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
   Serial.println(in, HEX);
+
 
   // Serial.print(" ");
   // Serial.println(D_reg_bitno);
