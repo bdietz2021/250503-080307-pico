@@ -39,6 +39,7 @@
 //  05/27/2025 - moved some function to D_base
 //  05/28/2025 - D_clear button works - at least prints msg
 //  05/29/2025 - Start customizing D_clear
+//  05/30/2025 - Add lower buttons
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -72,7 +73,6 @@ using namespace std;
 #include <Wire.h>
 // #define WIRE Wire  // not needed for two I2C busses
 #define DEBUGX 0
-#define CLEAR 1 // define to use the clear button object
 
 arduino::MbedI2C xwire0(I2C_SDA, I2C_SCL);
 arduino::MbedI2C xwire1((uint8_t)6, (uint8_t)7);
@@ -87,9 +87,8 @@ class D_bit;
 class D_base;
 class D_reg;
 
-int xouch()
+int xouch() // catistrophic error routing
 {
-  int i;
   Serial.println("Xouch!");
   while (1)
     ;
@@ -164,7 +163,7 @@ public:
   /** parent - link to i/o expander register D_byte. */
   D_byte *parent; // link to i/o expander register "byte"
   /** bit_no_in_byte - bit number in the i/o expander byte. */
-  int bit_no_in_byte; // bit number in byte
+  // int bit_no_in_byte; // bit number in byte
   /** mask - bit field in byte   */
   int mask;
   /** D_reg_link - pointer to front panel register or button */
@@ -182,6 +181,8 @@ public:
 class D_base
 {
 public:
+  D_base() { D_reg_bitno = 0; }; // constructor
+  char *name = nullptr;
   D_bit *parent;  // pointer to D_byte object
   long value;     // latest value
   long old_value; // previous value
@@ -254,20 +255,23 @@ public:
 class D_clear : public D_button
 { // front panel clear button
 public:
-  D_clear(D_bit *xparent)
+  D_clear(D_bit *xparent, char *namex)
   {
     parent = xparent;
     Serial.println("D_clear constructor");
+    name = namex;
   }
   int R_bit(int in)
   {
     Serial.println("D_clear::R_bit");
     Serial.println("clear display register");
-    clear_register(); // clear the display register
+    Serial.println(name); // printable name
+    clear_register();     // clear the display register
     return (0);
   }
   // int BN_changed_bit(int ) {return(0);};  // test
 };
+
 //
 /** @brief class usbio provides keyboard input from the host computer.
  * This is not a very sophisticatd class.
@@ -366,7 +370,7 @@ void D_byte::W_bytef()
     changed_in = (((data_in ^ previous_in) & 0xf0) >> 4); // find changed bits - mask and shift
     work = rev4[defined_bits];
     work = defined_bits;
-    changed_in = rev4[changed_in] & work ;         // reverse bits to match input bit order
+    changed_in = rev4[changed_in] & work; // reverse bits to match input bit order
 
     Serial.print("W_bytef: in/prev/changed: ");
     Serial.print(i2caddr, HEX);
@@ -501,6 +505,7 @@ D_bit::D_bit(D_byte *parentx, int maskx)
   mask = maskx;     // mask to select bit in 8-bit hw register
   parent = parentx; // pointer to W_byte object
   Serial.println("D_bit constructor");
+  D_reg_bitno = 0;
 };
 
 //  dummy R_bit
@@ -547,7 +552,6 @@ int D_button::R_bit(int in)
   Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
   Serial.println(in, HEX);
-
 
   // Serial.print(" ");
   // Serial.println(D_reg_bitno);
@@ -695,6 +699,7 @@ D_bit *dbit_save;
 usbio usbio2; // i/o via USB to FrontPanelH316.c
 D_reg *fp_dreg;
 D_base *fp_clear; // clear button object
+D_base *fp_ss1;   // ss1 switch
 
 // D_reg front_panel_reg;
 int display_value = 0;
@@ -770,22 +775,38 @@ void setup()
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_dreg->D_reg_addbit(dbit_save);
 
-//
-/*** define 5th byte for clear button ** */
-//
-#ifdef CLEAR
+  //
+  /*** define 5th byte for CLEAR button ** */
+  //
   dbyte_save = D_io_base->make(&xwire0, 0x21); // make one i/o expander (on SDA, SCL
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  // dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  //  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register **** BJD DUMMY
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save);
-  // dbit_save->D_reg_bitno = 0;
-//
-#endif
 
-/***  define bottom 16 bits */
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "CLR");
+  //   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS3");
+  //   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS2");
+  // dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS1");
+
+//
+
+/***  conditional compile - 32 bit register vs. active bottom row of buttons */
 #define testnow
 #ifdef testnow
+
+  dbyte_save = D_io_base->make(&xwire1, 0x20); // make one i/o expander
+                                               //      (on SDA, SCL = ,5)(20,22,24,26)
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS1");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS2");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS3");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS4");
+
+#else
 
   dbyte_save = D_io_base->make(&xwire1, 0x26); // make one i/o expander
   //      (on SDA, SCL = ,5)(20,22,24,26)
@@ -823,20 +844,19 @@ void setup()
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_dreg->D_reg_addbit(dbit_save);
   dbyte_save = D_io_base->make(&xwire1, 0x20); // i2c addr of i/o expander chip
-  //      (on SDA, SCL = ,5)
+//      (on SDA, SCL = ,5)
 
-  // //  define bits and add to register   // bits 13-16
-  // dbit_save = dbyte_save->mbit(dbyte_save,0x08);
-  // fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  // dbit_save = dbyte_save->mbit(dbyte_save,0x04);
-  // fp_dreg->D_reg_addbit(dbit_save);
-  // dbit_save = dbyte_save->mbit(dbyte_save,0x02);
-  // fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  // dbit_save = dbyte_save->mbit(dbyte_save,0x01);
-  // fp_dreg->D_reg_addbit(dbit_save);
-  fp_dreg->D_reg_end_bits(); // update bit number after last bit added
-
+// //  define bits and add to register   // bits 13-16
+// dbit_save = dbyte_save->mbit(dbyte_save,0x08);
+// fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
+// dbit_save = dbyte_save->mbit(dbyte_save,0x04);
+// fp_dreg->D_reg_addbit(dbit_save);
+// dbit_save = dbyte_save->mbit(dbyte_save,0x02);
+// fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
+// dbit_save = dbyte_save->mbit(dbyte_save,0x01);
+// fp_dreg->D_reg_addbit(dbit_save);
 #endif
+  fp_dreg->D_reg_end_bits(); // update bit number after last bit added
 
   if (DEBUGX)
   {
