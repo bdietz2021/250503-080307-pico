@@ -203,9 +203,22 @@ public:
 class D_button : public D_base
 {
 public:
-  D_bit *parent; // pointer to D_bit object
+  D_bit *parent;    // pointer to D_bit object
+  int button_value; // 0 = off, nz = on
   int R_bit(int);
-  int BN_changed_bit(int) { return (0); };
+  int BN_changed_bit(int j)
+  {
+    Serial.print("D_button::BN_changed_bit: ");
+    if (j == 0)
+    {
+      Serial.println("ON");
+    }
+    else
+    {
+      Serial.println("OFF");
+    }
+    return (0);
+  };
 
 private:
 };
@@ -260,12 +273,14 @@ public:
     parent = xparent;
     Serial.println("D_clear constructor");
     name = namex;
+    button_value = 0; // clear/set off
   }
   int R_bit(int in)
   {
-    Serial.println("D_clear::R_bit");
-    Serial.println("clear display register");
-    Serial.println(name); // printable name
+    Serial.print("D_clear::R_bit ");
+    button_value++; // set light on
+    Serial.print(name); // printable name
+    Serial.print(" ");
     clear_register();     // clear the display register
     return (0);
   }
@@ -512,10 +527,10 @@ D_bit::D_bit(D_byte *parentx, int maskx)
 /** Update bit in D_reg or D_button?  */
 int D_bit::R_bit(int in)
 {
-  Serial.print("D_bit::R_bit: ");
-  Serial.print((long unsigned int)this, HEX);
-  Serial.print(" ");
-  Serial.println(D_reg_bitno, HEX);
+  // Serial.print("D_bit::R_bit: ");
+  // Serial.print((long unsigned int)this, HEX);
+  // Serial.print(" ");
+  // Serial.println(D_reg_bitno, HEX);
   if (D_reg_bitno > 33)
     xouch();
   D_reg_link->R_bit(D_reg_bitno);
@@ -585,7 +600,7 @@ void D_bit::W_bit(int bitno, int output_bit)
 int D_bit::R_changed_bit(int data)
 { // experimental update fp register
   int i;
-  i = parent->R_bytef() & data;  // find - changed to 0 or 1?
+  i = parent->R_bytef() & mask;  // find - changed to 0 or 1?
   D_reg_link->BN_changed_bit(i); // notify the register or button object
   return (0);
 };
@@ -673,6 +688,8 @@ int usbio::in_char()
   {
     // read incoming serial data:
     inCharx = Serial.read();
+
+    while(Serial.available() > 0) Serial.read();
 
     // Serial.print("usbio::in_char  ");
     // Serial.println((int) inCharx,HEX);
@@ -781,7 +798,7 @@ void setup()
   dbyte_save = D_io_base->make(&xwire0, 0x21); // make one i/o expander (on SDA, SCL
 
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "CLR");
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *)"CLR");
   //   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
   // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS3");
   //   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
@@ -795,16 +812,54 @@ void setup()
 #define testnow
 #ifdef testnow
 
+//  define sense switches 
   dbyte_save = D_io_base->make(&xwire1, 0x20); // make one i/o expander
                                                //      (on SDA, SCL = ,5)(20,22,24,26)
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS1");
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS1");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS2");
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "SS2");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS3");
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS3");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS4");
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS4");
+
+// define register-select "radio buttons" for A, B, OP, P/Y
+  dbyte_save = D_io_base->make(&xwire1, 0x24); // i2c addr of i/o expander chip
+  //      (on SDA, SCL = ,5)(20,22,24,26)
+    dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "A-reg");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "B-reg");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "OP");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "P/Y");
+
+  //  define "radio buttons" for M
+  //  define Master Clear, Fetch, P+1
+
+  dbyte_save = D_io_base->make(&xwire1, 0x22); // i2c addr of i/o expander chip
+    dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "M-reg");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "M-clear");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Fetch");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "P+1");
+
+  //  define MA/Run/ Start ..
+    dbyte_save = D_io_base->make(&xwire1, 0x26); // i2c addr of i/o expander chip
+       dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+      fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "MA/Fetch/");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "MA/SI/RUN");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Start");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Spare");
+//      (on SDA, SCL = ,5)
 
 #else
 
@@ -1036,9 +1091,7 @@ void loop()
     current_cmd = 1; // default to rotate
     break;
   }
-  //  process inputs
 
-  // }
   // /Users/bdietz/Library/Arduino15/packages/arduino/hardware/mbed_rp2040/4.2.4
   //  /cores/arduino/mbed/targets/TARGET_RASPBERRYPI/TARGET_RP2040/pico-sdk/rp2_common/hardware_watchdog/include/hardware
 }
