@@ -40,6 +40,7 @@
 //  05/28/2025 - D_clear button works - at least prints msg
 //  05/29/2025 - Start customizing D_clear
 //  05/30/2025 - Add lower buttons
+//  06/03/2025 - All buttons defined. Fix bugs.
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -86,6 +87,7 @@ class D_byte;
 class D_bit;
 class D_base;
 class D_reg;
+int step_cmd(); //
 
 int xouch() // catistrophic error routing
 {
@@ -187,13 +189,33 @@ public:
   long value;     // latest value
   long old_value; // previous value
   int D_reg_bitno;
+  int button_value; // 0 = off, nz = on
   D_base *D_reg_link;
   // virtual int action(); // execute when the bit changes
   // virtual int clear();  // reset value
   virtual int R_bit(int);
   virtual int W_bit(int, int) { return (0); };
 
-  virtual int BN_changed_bit(int) { return (0); }; // test
+  virtual int BN_changed_bit(int j) //
+  {
+    Serial.print("D_base::BN_changed_bit: ");
+    // if (j == 0)
+    // {
+    //   Serial.println("ON");
+    //   if ((button_value & 2) == 0)
+    //   {
+    //     Serial.print("D_base::Gotcha\n");
+    //     //    parent->W_bit(0, 1);
+    //   } // Write output bit via byte
+    // }
+    // else
+    // {
+    //   Serial.println("OFF");
+    //   //        parent->R_bit(changed_in); // BJD DEBUG
+    //   //  parent->W_bit(0, 1); // Write output bit via byte
+    // }
+    return (0);
+  };
 };
 
 //  class D_button - base class for all single button input
@@ -203,22 +225,75 @@ public:
 class D_button : public D_base
 {
 public:
-  D_bit *parent;    // pointer to D_bit object
-  int button_value; // 0 = off, nz = on
+  D_bit *parent; // pointer to D_bit object
   int R_bit(int);
   int BN_changed_bit(int j)
   {
+    int temp;
+
+    temp = parent->parent->R_bytef() & parent->mask; // get latest input bit value -- never zero
     Serial.print("D_button::BN_changed_bit: ");
+    Serial.print("button_value = ");
+    Serial.print(button_value);
+    Serial.print(" data ");
+    Serial.print(temp, HEX);
+    Serial.print(" j = ");
+    Serial.print(j);
+
+    //   //  state machine for switch push/release
+    //   switch (button_value) // switch on state of button
+    //   {
+    //   case 0: // LED is off
+    //     break;
+    //   case 1: // LED is on
+    //     break;
+    //   case 2: // transition state
+    //     break;
+    //   default:
+    //     button_value = 0;
+    //     break;
+    //   }
+    // }
     if (j == 0)
-    {
-      Serial.println("ON");
-    }
-    else
-    {
-      Serial.println("OFF");
+    { // process Switch ON events only (ignore OFF)
+      if (button_value == 0)
+      {
+        // LED was OFF, turn it on
+        Serial.println("ON");
+        button_value = 1; // set switch state to ON
+        Serial.print("D_button BN_changed_bit NEW\n");
+        parent->W_bit(0, 1);
+      }
+      else
+      {
+        // LED was ON, turn it off
+        Serial.println("OFF");
+        button_value = 0; // set switch statte to OFF
+        Serial.print("D_button BN_changed_bit NEW\n");
+        parent->W_bit(0, 0);
+      }
     }
     return (0);
-  };
+  }
+  //   if (j == 0)
+  //   {
+
+  //     // if ((button_value & 2) == 0)
+  //     if (temp == 0)
+  //     {
+  //       Serial.println("ON");
+  //       Serial.print("D_button BN_changed_bit NEW\n");
+  //       parent->W_bit(0, 1);
+  //     } // Write output bit via byte
+  //   }
+  //   else
+  //   {
+  //     Serial.println("OFF");
+  //     //        parent->R_bit(changed_in); // BJD DEBUG
+  //     parent->W_bit(0, 0); // Write output bit via byte
+  //   }
+  //   return (0);
+  // };
 
 private:
 };
@@ -258,7 +333,6 @@ public:
   /** XXX needs work */
   int R_bit(int);
   /** XXX needs work */
-  int BN_changed_bit(int) { return (0); }; // test
 };
 //
 /** @brief class D_clear provides an object for the front panel "clear" button
@@ -278,15 +352,58 @@ public:
   int R_bit(int in)
   {
     Serial.print("D_clear::R_bit ");
-    button_value++; // set light on
+    button_value++;     // set light on
     Serial.print(name); // printable name
     Serial.print(" ");
-    clear_register();     // clear the display register
+    // clear_register(); // clear the display register
     return (0);
   }
-  // int BN_changed_bit(int ) {return(0);};  // test
 };
 
+class D_demo : public D_button
+{ // front panel clear button
+public:
+  D_demo(D_bit *xparent, char *namex)
+  {
+    parent = xparent;
+    Serial.println("D_demo constructor");
+    name = namex;
+    button_value = 0; // clear/set off
+  }
+  int R_bit(int in)
+  {
+    Serial.print("D_demo::R_bit ");
+    // button_value++;            // set light on
+    Serial.print("DEMO MODE"); // printable name
+    Serial.print(" ");
+    Serial.println(name); // printable name
+    return (0);
+  }
+};
+
+class D_spare : public D_button
+{ // spare front panel button
+public:
+  D_spare(D_bit *xparent, char *namex)
+  {
+    parent = xparent;
+    Serial.println("D_spare constructor");
+    name = namex;
+    button_value = 0; // clear/set off
+  }
+  int R_bit(int in)
+  {
+    Serial.print("D_spare::R_bit ");
+    button_value++;            // set light on
+    Serial.print("DEMO MODE"); // printable name
+    Serial.print(" ");
+    Serial.print(name); // printable name
+    Serial.print(" ");
+    if ((button_value & 2) == 0)
+      step_cmd(); // change demo mode
+    return (0);
+  }
+};
 //
 /** @brief class usbio provides keyboard input from the host computer.
  * This is not a very sophisticatd class.
@@ -299,6 +416,20 @@ public:
   int in_char();
   int out_char();
   int inCharx; // last character read
+};
+
+/** @brief: class lcontrol provides variables/methods for controlling the main loop  */
+//
+class lcontrol
+{
+  public:
+    int current_cmd_global;
+    int current_cmd;
+    int inChar;
+    unsigned long delay_time = 1000;
+
+  private:
+
 };
 
 /********************* end of class definitions ******************/
@@ -600,7 +731,8 @@ void D_bit::W_bit(int bitno, int output_bit)
 int D_bit::R_changed_bit(int data)
 { // experimental update fp register
   int i;
-  i = parent->R_bytef() & mask;  // find - changed to 0 or 1?
+  i = parent->R_bytef() & mask; // find - changed to 0 or 1?
+  Serial.println("D_bit::R_changed_bit ");
   D_reg_link->BN_changed_bit(i); // notify the register or button object
   return (0);
 };
@@ -689,7 +821,7 @@ int usbio::in_char()
     // read incoming serial data:
     inCharx = Serial.read();
 
-    while(Serial.available() > 0) Serial.read();
+    // while(Serial.available() > 0) Serial.read();
 
     // Serial.print("usbio::in_char  ");
     // Serial.println((int) inCharx,HEX);
@@ -713,10 +845,13 @@ int usbio::in_char()
 static D_io *D_io_base;
 D_byte *dbyte_save;
 D_bit *dbit_save;
-usbio usbio2; // i/o via USB to FrontPanelH316.c
+static usbio usbio2; // i/o via USB to FrontPanelH316.c
 D_reg *fp_dreg;
 D_base *fp_clear; // clear button object
 D_base *fp_ss1;   // ss1 switch
+
+// static int current_cmd_global;
+static lcontrol loop_control;
 
 // D_reg front_panel_reg;
 int display_value = 0;
@@ -740,7 +875,6 @@ void setup()
   }
   D_io_base = new D_io;  // base of all i/o expander i/o
   fp_dreg = new D_reg(); // define the front-panel register
-  // fp_clear = new D_clear(NULL); // define clear register button object
 
   /***  define top 16 bits */
 
@@ -800,11 +934,11 @@ void setup()
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *)"CLR");
   //   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS3");
+  // fp_clear = dbit_save->D_reg_link = new (dbit_save, "SS3");
   //   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS2");
+  // fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, "SS2");
   // dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  // fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, "SS1");
+  // fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, "SS1");
 
 //
 
@@ -812,54 +946,54 @@ void setup()
 #define testnow
 #ifdef testnow
 
-//  define sense switches 
+  //  define sense switches
   dbyte_save = D_io_base->make(&xwire1, 0x20); // make one i/o expander
                                                //      (on SDA, SCL = ,5)(20,22,24,26)
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS1");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS1");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "SS2");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS2");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS3");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS3");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "SS4");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS4");
 
-// define register-select "radio buttons" for A, B, OP, P/Y
+  // define register-select "radio buttons" for A, B, OP, P/Y
   dbyte_save = D_io_base->make(&xwire1, 0x24); // i2c addr of i/o expander chip
-  //      (on SDA, SCL = ,5)(20,22,24,26)
-    dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "A-reg");
+                                               //      (on SDA, SCL = ,5)(20,22,24,26)
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"A-reg");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "B-reg");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"B-reg");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "OP");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"OP");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "P/Y");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"P/Y");
 
   //  define "radio buttons" for M
   //  define Master Clear, Fetch, P+1
 
   dbyte_save = D_io_base->make(&xwire1, 0x22); // i2c addr of i/o expander chip
-    dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "M-reg");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"M-reg");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "M-clear");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"M-clear");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Fetch");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"Fetch");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "P+1");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"P+1");
 
   //  define MA/Run/ Start ..
-    dbyte_save = D_io_base->make(&xwire1, 0x26); // i2c addr of i/o expander chip
-       dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-      fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "MA/Fetch/");
+  dbyte_save = D_io_base->make(&xwire1, 0x26); // i2c addr of i/o expander chip
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/Fetch/");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *) "MA/SI/RUN");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/SI/RUN");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Start");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"Start");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save,(char *) "Spare");
-//      (on SDA, SCL = ,5)
+  fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Spare");
+  //      (on SDA, SCL = ,5)
 
 #else
 
@@ -940,6 +1074,7 @@ void count(unsigned long delay_time)
 
   fp_dreg->D_reg_write_word(0x0);
   D_io_base->W_wordf();
+  D_io_base->R_scan();
 
   delay(delay_time); // wait for a second
 }
@@ -1022,6 +1157,16 @@ void clear_register()
   D_io_base->W_wordf();
 }
 
+int step_cmd()
+{ // advance to the next command
+  loop_control.current_cmd_global++;
+  if (loop_control.current_cmd_global > 2)
+    loop_control.current_cmd_global = 0;
+  Serial.print("Changed demo command mode: ");
+  Serial.println(loop_control.current_cmd_global);
+  return (0);
+}
+
 int command(int i)
 {
   int return_value;
@@ -1042,45 +1187,48 @@ void reboot()
 
 void loop()
 {
-  static int current_cmd;
-  static int inChar;
-  static unsigned long delay_time = 1000; // delay before continue loop
+  unsigned long mytime;
+mytime = millis();
+ // Serial.println(mytime);
+  // static int current_cmd;
+  // static int inChar;
+  // static unsigned long delay_time = 1000; // delay before continue loop
 
   // put your main code here, to run repeatedly:
 
   // the loop function runs over and over again forever
 
-  inChar = usbio2.in_char();
-  if (inChar != -1)
+  loop_control.inChar = usbio2.in_char();
+  if (loop_control.inChar != -1)
   {
-    current_cmd = command(inChar);
-    // Serial.println(current_cmd,HEX);
-    delay_time = 1000;
+    loop_control.current_cmd_global = command(loop_control.inChar);
+    // Serial.println(current_cmd_global,HEX);
+    loop_control.delay_time = 1000;
   }
-  switch (current_cmd)
+  switch (loop_control.current_cmd_global)
   {
   case 0: // a
-    count(delay_time);
+    count(loop_control.delay_time);
     if (usbio2.in_available() > 0)
-      delay_time = 50;
+      loop_control.delay_time = 50;
     else
-      delay_time = 1000;
+      loop_control.delay_time = 1000;
     break;
   case 1: // b
-    rotate(delay_time);
+    rotate(loop_control.delay_time);
     // if (usbio2.in_available() > 0) delay_time = 50; else delay_time = 1000;
-    delay_time = 100;
+    loop_control.delay_time = 100;
     break;
   case 2: // c
-    display_register(delay_time);
+    display_register(loop_control.delay_time);
     break;
   case 3: // d
     clear_register();
-    current_cmd = 2; // back to display registeer
+    loop_control.current_cmd_global = 2; // back to display registeer
     break;
   case 4: // e
     save_register();
-    current_cmd = 2; // back to display register
+    loop_control.current_cmd_global = 2; // back to display register
     break;
   case 5:     // f
     reboot(); // force reboot via wdt
@@ -1088,9 +1236,11 @@ void loop()
     break;
   default:
     count(50);
-    current_cmd = 1; // default to rotate
+    loop_control.current_cmd_global = 1; // default to rotate
     break;
   }
+  // D_io_base->W_wordf(); // write and read all bytes ---BJD DEBUG - experimental
+  // D_io_base->R_scan();
 
   // /Users/bdietz/Library/Arduino15/packages/arduino/hardware/mbed_rp2040/4.2.4
   //  /cores/arduino/mbed/targets/TARGET_RASPBERRYPI/TARGET_RP2040/pico-sdk/rp2_common/hardware_watchdog/include/hardware
