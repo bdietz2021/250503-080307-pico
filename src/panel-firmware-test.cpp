@@ -41,6 +41,7 @@
 //  05/29/2025 - Start customizing D_clear
 //  05/30/2025 - Add lower buttons
 //  06/03/2025 - All buttons defined. Fix bugs.
+//  06/08/2025 - checkpoint version
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
