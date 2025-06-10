@@ -42,6 +42,7 @@
 //  05/30/2025 - Add lower buttons
 //  06/03/2025 - All buttons defined. Fix bugs.
 //  06/08/2025 - checkpoint version
+//  06/10/2025 - Release candidate for Demo 1
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -115,9 +116,9 @@ private:
 
 public:
   D_io();
-  D_byte *make(MbedI2C *, int); // create byte, add to table, return ptr
-  void W_wordf();               // force writes on all bytes
-  int R_scan();                 // scan for changed inputs on all bytes
+  D_byte *make(MbedI2C *, int, int); // create byte, add to table, return ptr
+  void W_wordf();                    // force writes on all bytes
+  int R_scan();                      // scan for changed inputs on all bytes
 };
 /**
  * @brief D_byte class provides a single object to control a single i/o expander
@@ -126,12 +127,12 @@ public:
 class D_byte
 { /* : public  D_io */ // one byte-sized register on a PCF8574TS
 public:
-  D_byte(MbedI2C *ptr, int addr);        // constructor
-  void W_byte(int mask, int data);       // update out byte
-  void W_bytef();                        // flush out byte to hw
-  int R_bytef();                         // return most recent input data
-  int R_find_changes();                  // find changes and call D_bit object
-  D_bit *mbit(D_byte *parent, int mask); /** make a D_bit object and add to D_byte **/
+  D_byte(MbedI2C *ptr, int addr, int debug); // constructor
+  void W_byte(int mask, int data);           // update out byte
+  void W_bytef();                            // flush out byte to hw
+  int R_bytef();                             // return most recent input data
+  int R_find_changes();                      // find changes and call D_bit object
+  D_bit *mbit(D_byte *parent, int mask);     /** make a D_bit object and add to D_byte **/
 
   /** D_byte is the heart of this system.
    * It is related on a one-to-one basis to the i2c bus and the i/o expander chip.
@@ -140,12 +141,14 @@ private:
   MbedI2C *i2c_bus = NULL;
   int i2caddr;
   int dbit_index = 0;
-  int data_out;      // saved last value output to hardware
-  int data_in;       // last value read from hw
-  int previous_in;   // previous input to find changes
-  int changed_in;    // bit mask for changes
-  int defined_bits;  // set only for bits in use
-  int change_flag;   // mark when changed for output
+  int data_out;              // saved last value output to hardware
+  int data_in;               // last value read from hw
+  unsigned long change_time; // time of last change
+  int previous_in;           // previous input to find changes
+  int changed_in;            // bit mask for changes
+  int defined_bits;          // set only for bits in use
+  int change_flag;           // mark when changed for output
+  int debug_flag;
   D_bit *D_bits[16]; // pointer to bits in this byte
   int junk;          // scratch variable
   D_bit *temp2;
@@ -423,14 +426,13 @@ public:
 //
 class lcontrol
 {
-  public:
-    int current_cmd_global;
-    int current_cmd;
-    int inChar;
-    unsigned long delay_time = 1000;
+public:
+  int current_cmd_global;
+  int current_cmd;
+  int inChar;
+  unsigned long delay_time = 1000;
 
-  private:
-
+private:
 };
 
 /********************* end of class definitions ******************/
@@ -449,7 +451,7 @@ D_io::D_io()
 /** Create a new byte for this i/o expander
  * The hardware i/o expander provides four input and four output bits.
  */
-D_byte::D_byte(MbedI2C *ptr, int addr)
+D_byte::D_byte(MbedI2C *ptr, int addr, int debug)
 { // constructor
   Serial.println("D_byte constructor ");
   Serial.println(addr, HEX);
@@ -463,7 +465,8 @@ D_byte::D_byte(MbedI2C *ptr, int addr)
   data_in = 0xff;
   previous_in = 0;
   changed_in = 0;
-  defined_bits = 0; // no bits defined yet
+  defined_bits = 0;   // no bits defined yet
+  debug_flag = debug; // save this for optional debug printouts
 };
 
 /** Write one bit to i/o expander byte, but do not flush
@@ -471,11 +474,12 @@ D_byte::D_byte(MbedI2C *ptr, int addr)
  */
 void D_byte::W_byte(int addmask, int data_outx)
 {
-  if (DEBUGX)
-    Serial.print("W_byte: ");
-  if (DEBUGX)
-    Serial.print(addmask, HEX);
   data_out = (data_out & (~addmask)) | (data_outx & addmask); // update saved value
+  if (debug_flag)
+  {
+    Serial.print("W_byte: ");
+    Serial.println(data_out, HEX);
+  };
   change_flag++;
 };
 /** return input bits from last read.
@@ -496,24 +500,32 @@ int D_byte::R_bytef()
 void D_byte::W_bytef()
 { // byte flush - write byte to hw/read from hw
   int work;
-  if (DEBUGX)
-    Serial.print("W_bytef: ");
-  if (DEBUGX)
-    Serial.println(data_out, HEX);
+  unsigned long time_now;
+  unsigned int debounce = 100; // minimum milliseconds between reads
+  // if (debug_flag)
+  //   Serial.print("W_bytef: ");
+  // if (debug_flag)
+  //   Serial.println(data_out, HEX);
   i2c_bus->beginTransmission(i2caddr);
+  work = (0xf0 | ((data_out & 0x0f) ^ 0x0f));
   i2c_bus->write((0xf0 | ((data_out & 0x0f) ^ 0x0f))); // invert bits
-  if (DEBUGX)
-    Serial.println(data_out, HEX); //
+  // if (debug_flag)
+  //   Serial.println(work, HEX); //
   i2c_bus->endTransmission();
   change_flag = 0; // clear change flag
   //
   // add logic to read input
   //
+  time_now = millis();
+  if ((time_now - change_time) < debounce)
+    return;
+
   i2c_bus->requestFrom(i2caddr, 1);
   previous_in = data_in;
   data_in = i2c_bus->read(); // read new data
   if (((data_in ^ previous_in) & 0xf0) != 0)
   {
+    change_time = time_now;                               // save last time of change
     changed_in = (((data_in ^ previous_in) & 0xf0) >> 4); // find changed bits - mask and shift
     work = rev4[defined_bits];
     work = defined_bits;
@@ -535,10 +547,10 @@ void D_byte::W_bytef()
 /** Create D_byte object and add to D_io object.
  * This is how D_io can control all bytes.
  */
-D_byte *D_io::make(MbedI2C *bus, int addr)
+D_byte *D_io::make(MbedI2C *bus, int addr, int debugx)
 { // add the byte register in an i/o expander
   //    Serial.println("D_io make");
-  temp = new D_byte(bus, addr);
+  temp = new D_byte(bus, addr, debugx);
   D_bytes[dbyte_index++] = temp;
   return (temp);
 };
@@ -631,11 +643,12 @@ int D_byte::R_find_changes()
 
         // D_bits[i]->D_reg_bitno;  // this bit was changed  NOOP
         D_bits[i]->R_bit(changed_in); // BJD DEBUG
-        D_bits[i]->W_bit(i, 1);       // Write output bit via byte
+   //     D_bits[i]->W_bit(i, 1);       // Write output bit via byte
+        D_bits[i]->W_bit(i, (data_in & (D_bits[i]->mask)) );       // Write output bit via byte
 
         D_bits[i]->R_changed_bit(0); // update registers/buttons using this bit BJD
 
-        changed_in = changed_in & (~changed_in);
+        changed_in = changed_in & (~(D_bits[i]->mask));
         // Serial.println(changed_in,HEX);
         break;
       }
@@ -879,7 +892,7 @@ void setup()
 
   /***  define top 16 bits */
 
-  dbyte_save = D_io_base->make(&xwire0, 0x26); // make one i/o expander
+  dbyte_save = D_io_base->make(&xwire0, 0x26, 0); // make one i/o expander
   //      (on SDA, SCL = ,5)(20,22,24,26)
   //  define bits and add to front panel register   // bits labeled 1-4
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
@@ -891,7 +904,7 @@ void setup()
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_dreg->D_reg_addbit(dbit_save);
 
-  dbyte_save = D_io_base->make(&xwire0, 0x22); // i2c addr of i/o expander chip
+  dbyte_save = D_io_base->make(&xwire0, 0x22, 0); // i2c addr of i/o expander chip
   //      (on SDA, SCL = ,5)(20,22,24,26)
   //  define bits and add to register   // bits labeled 5-8
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
@@ -903,7 +916,7 @@ void setup()
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_dreg->D_reg_addbit(dbit_save);
 
-  dbyte_save = D_io_base->make(&xwire0, 0x24); // i2c addr of i/o expander chip
+  dbyte_save = D_io_base->make(&xwire0, 0x24, 0); // i2c addr of i/o expander chip
   //      (on SDA, SCL = ,5)(20,22,24,26)
   //  define bits and add to register   // bits labeled 9-12
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
@@ -914,7 +927,7 @@ void setup()
   fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_dreg->D_reg_addbit(dbit_save);
-  dbyte_save = D_io_base->make(&xwire0, 0x20); // i2c addr of i/o expander chip
+  dbyte_save = D_io_base->make(&xwire0, 0x20, 0); // i2c addr of i/o expander chip
   //      (on SDA, SCL = ,5)
 
   //  define bits and add to register   // bits 13-16
@@ -930,7 +943,7 @@ void setup()
   //
   /*** define 5th byte for CLEAR button ** */
   //
-  dbyte_save = D_io_base->make(&xwire0, 0x21); // make one i/o expander (on SDA, SCL
+  dbyte_save = D_io_base->make(&xwire0, 0x21, 0); // make one i/o expander (on SDA, SCL
 
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *)"CLR");
@@ -948,8 +961,8 @@ void setup()
 #ifdef testnow
 
   //  define sense switches
-  dbyte_save = D_io_base->make(&xwire1, 0x20); // make one i/o expander
-                                               //      (on SDA, SCL = ,5)(20,22,24,26)
+  dbyte_save = D_io_base->make(&xwire1, 0x20, 1); // make one i/o expander
+                                                  //      (on SDA, SCL = ,5)(20,22,24,26)
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS1");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
@@ -960,8 +973,8 @@ void setup()
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS4");
 
   // define register-select "radio buttons" for A, B, OP, P/Y
-  dbyte_save = D_io_base->make(&xwire1, 0x24); // i2c addr of i/o expander chip
-                                               //      (on SDA, SCL = ,5)(20,22,24,26)
+  dbyte_save = D_io_base->make(&xwire1, 0x24, 0); // i2c addr of i/o expander chip
+                                                  //      (on SDA, SCL = ,5)(20,22,24,26)
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"A-reg");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
@@ -974,7 +987,7 @@ void setup()
   //  define "radio buttons" for M
   //  define Master Clear, Fetch, P+1
 
-  dbyte_save = D_io_base->make(&xwire1, 0x22); // i2c addr of i/o expander chip
+  dbyte_save = D_io_base->make(&xwire1, 0x22, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"M-reg");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
@@ -985,7 +998,7 @@ void setup()
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"P+1");
 
   //  define MA/Run/ Start ..
-  dbyte_save = D_io_base->make(&xwire1, 0x26); // i2c addr of i/o expander chip
+  dbyte_save = D_io_base->make(&xwire1, 0x26, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/Fetch/");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
@@ -1189,8 +1202,8 @@ void reboot()
 void loop()
 {
   unsigned long mytime;
-mytime = millis();
- // Serial.println(mytime);
+  // mytime = millis();
+  // Serial.println(mytime);
   // static int current_cmd;
   // static int inChar;
   // static unsigned long delay_time = 1000; // delay before continue loop
