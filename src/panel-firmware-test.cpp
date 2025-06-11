@@ -43,6 +43,7 @@
 //  06/03/2025 - All buttons defined. Fix bugs.
 //  06/08/2025 - checkpoint version
 //  06/10/2025 - Release candidate for Demo 1
+//  06/10/2025 - changes post release candidate
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -359,7 +360,7 @@ public:
     button_value++;     // set light on
     Serial.print(name); // printable name
     Serial.print(" ");
-    // clear_register(); // clear the display register
+    clear_register(); // clear the display register
     return (0);
   }
 };
@@ -642,9 +643,9 @@ int D_byte::R_find_changes()
       {
 
         // D_bits[i]->D_reg_bitno;  // this bit was changed  NOOP
-        D_bits[i]->R_bit(changed_in); // BJD DEBUG
-   //     D_bits[i]->W_bit(i, 1);       // Write output bit via byte
-        D_bits[i]->W_bit(i, (data_in & (D_bits[i]->mask)) );       // Write output bit via byte
+        D_bits[i]->R_bit(changed_in);                       // BJD DEBUG
+                                                            //     D_bits[i]->W_bit(i, 1);       // Write output bit via byte
+        D_bits[i]->W_bit(i, (data_in & (D_bits[i]->mask))); // Write output bit via byte
 
         D_bits[i]->R_changed_bit(0); // update registers/buttons using this bit BJD
 
@@ -1095,7 +1096,7 @@ void count(unsigned long delay_time)
 
 /********************************* rotate display pattern *************************/
 static unsigned long pattern = 072727;
-static unsigned long pattern_reset = 0x80000000;
+static unsigned long pattern_reset = 0x8000;
 
 void rotate(unsigned long delay_time)
 {
@@ -1178,6 +1179,11 @@ int step_cmd()
     loop_control.current_cmd_global = 0;
   Serial.print("Changed demo command mode: ");
   Serial.println(loop_control.current_cmd_global);
+  fp_dreg->D_reg_write_word(0xffff);
+  D_io_base->W_wordf(); // flash all ones
+  delay(100);
+  fp_dreg->D_reg_write_word(0);
+  D_io_base->W_wordf();
   return (0);
 }
 
