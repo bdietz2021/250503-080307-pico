@@ -44,7 +44,7 @@
 //  06/08/2025 - checkpoint version
 //  06/10/2025 - Release candidate for Demo 1
 //  06/10/2025 - changes post release candidate
-//
+//  06/15/2025 - JSON changes decode properly, but fp register not set
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
 //  Note: wiring is not consecutive - this simplified board layout
@@ -75,11 +75,14 @@
 
 using namespace std;
 #include <Wire.h>
+#include "cJSON.h" // JSON utilities
 // #define WIRE Wire  // not needed for two I2C busses
 #define DEBUGX 0
 
 arduino::MbedI2C xwire0(I2C_SDA, I2C_SCL);
 arduino::MbedI2C xwire1((uint8_t)6, (uint8_t)7);
+
+int status_A(const char *const monitor);
 
 static int rev4[16] = {0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,
                        0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f}; // reverse four bits msb/lsb (i/o expander oddity)
@@ -417,10 +420,16 @@ public:
 class usbio
 {
 public:
+  usbio() { index = 0; };
+  // constructor
   int in_available();
   int in_char();
   int out_char();
+  char *in_string();
   int inCharx; // last character read
+private:
+  char buff[256];
+  int index;
 };
 
 /** @brief: class lcontrol provides variables/methods for controlling the main loop  */
@@ -438,6 +447,10 @@ private:
 
 /********************* end of class definitions ******************/
 
+static usbio usbio2; // i/o via USB to FrontPanelH316.c
+D_reg *fp_dreg;
+D_base *fp_clear; // clear button object
+D_base *fp_ss1;   // ss1 switch
 /** Random, uncategorized multi-line comment in D_io construct
  * or method.
  */
@@ -840,7 +853,22 @@ int usbio::in_char()
 
     // Serial.print("usbio::in_char  ");
     // Serial.println((int) inCharx,HEX);
+    if (inCharx == 0x3c)
+    { // < means start string
+      while ((inCharx = Serial.read()) != 0x3e)
+      {
+        if (inCharx > 0)
+        {
+          buff[index++] = inCharx;
+          buff[index] = 0;
+        }
+      }
 
+      Serial.print("<string> ");
+      Serial.println(buff);
+      return (0x67); // key for case statement
+    }
+    // not start of string
     if ((inCharx >= 0x41) && (inCharx <= 0x7a))
     { // was 7a
       return (inCharx);
@@ -849,6 +877,65 @@ int usbio::in_char()
       return (-1);
   }
   return (-1);
+}
+char *usbio::in_string()
+{
+  buff[index] = 0;
+  index = 0;
+  return (buff);
+};
+
+/** @brief process a json command enclosed in <>
+ * <{"name":"H316 Front Panel Status","A":668}> (test data)
+ */
+void process_json()
+{
+  Serial.println("enter process_json");
+  fp_dreg->value = status_A(usbio2.in_string());
+  //fp_dreg->D_reg_write_word(fp_dreg->value);
+ // D_io_base->W_wordf(); // write and read all bytes
+  Serial.println(fp_dreg->value);
+  //  loop_control.current_cmd_global = 3; // set to display register
+  //
+};
+
+/** @brief: process json command to set A register
+ *
+ */
+int status_A(const char *const monitor)
+{
+  const cJSON *a_ptr = NULL;
+  const cJSON *name = NULL;
+  int status = 0;
+
+  cJSON *monitor_json = cJSON_Parse(monitor);
+  if (monitor_json == NULL)
+  {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if (error_ptr != NULL)
+    {
+      fprintf(stderr, "Error before: %s\n", error_ptr);
+    }
+    status = 0;
+    goto end;
+  }
+
+  name = cJSON_GetObjectItemCaseSensitive(monitor_json, "name");
+  if (cJSON_IsString(name) && (name->valuestring != NULL))
+  {
+    printf("Checking monitor \"%s\"\n", name->valuestring);
+  }
+
+  a_ptr = cJSON_GetObjectItemCaseSensitive(monitor_json, "A");
+  if (cJSON_IsNumber(a_ptr))
+  {
+    status = a_ptr->valuedouble;
+    goto end;
+  }
+
+end:
+  cJSON_Delete(monitor_json);
+  return status;
 };
 
 /************************* end of object member functions ************************/
@@ -860,10 +947,10 @@ int usbio::in_char()
 static D_io *D_io_base;
 D_byte *dbyte_save;
 D_bit *dbit_save;
-static usbio usbio2; // i/o via USB to FrontPanelH316.c
-D_reg *fp_dreg;
-D_base *fp_clear; // clear button object
-D_base *fp_ss1;   // ss1 switch
+//
+// D_reg *fp_dreg;
+// D_base *fp_clear; // clear button object
+// D_base *fp_ss1;   // ss1 switch
 
 // static int current_cmd_global;
 static lcontrol loop_control;
@@ -1069,6 +1156,12 @@ void setup()
     Serial.println("\nPanel Test - enter anything 2 start");
     Serial.read();
   }
+  // test json
+  // char xstringL = '"{"name":"H316 Front Panel Status","A":668}"';
+  // char *xstring = &xstringL;
+  // printf(xstring);
+  // int itemp = status_A(xstring);
+  // printf("\nreturn A = %o\n", itemp);
 }
 
 /********************************* counter display pattern *************************/
@@ -1139,7 +1232,7 @@ void display_register(unsigned long delay_time)
   // dbit_save->W_bit(1);
   fp_dreg->D_reg_write_word(fp_dreg->value);
 
-  D_io_base->W_wordf(); // write and read all bytes
+   D_io_base->W_wordf(); // write and read all bytes
 
   delay((unsigned long)2); // wait
 
@@ -1194,7 +1287,13 @@ int command(int i)
     Serial.print("command: from USB - ");
   if (1)
     Serial.println(i, HEX);
+  // if (i == 0x03c) {
+  //   /*. add here */
+
+  // }
+  // else {
   return_value = (i - 0x61);
+  // }
 
   return (return_value);
 }
@@ -1253,6 +1352,10 @@ void loop()
   case 5:     // f
     reboot(); // force reboot via wdt
     delay(9000);
+    break;
+  case 6: // g implies <>
+    process_json();
+    loop_control.current_cmd_global = 3;
     break;
   default:
     count(50);
