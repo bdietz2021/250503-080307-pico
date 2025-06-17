@@ -45,6 +45,7 @@
 //  06/10/2025 - Release candidate for Demo 1
 //  06/10/2025 - changes post release candidate
 //  06/15/2025 - JSON changes decode properly, but fp register not set
+//
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
 //  Note: wiring is not consecutive - this simplified board layout
@@ -235,6 +236,7 @@ class D_button : public D_base
 public:
   D_bit *parent; // pointer to D_bit object
   int R_bit(int);
+  virtual void R_bit_on() {Serial.println("D_button::R_bit_on");};
   int BN_changed_bit(int j)
   {
     int temp;
@@ -271,6 +273,7 @@ public:
         button_value = 1; // set switch state to ON
         Serial.print("D_button BN_changed_bit NEW\n");
         parent->W_bit(0, 1);
+        R_bit_on();
       }
       else
       {
@@ -402,14 +405,18 @@ public:
   int R_bit(int in)
   {
     Serial.print("D_spare::R_bit ");
-    button_value++;            // set light on
+    // button_value++;            // set light on
     Serial.print("DEMO MODE"); // printable name
     Serial.print(" ");
     Serial.print(name); // printable name
     Serial.print(" ");
-    if ((button_value & 2) == 0)
-      step_cmd(); // change demo mode
+    // if ((button_value & 2) == 0)
+    //   step_cmd(); // change demo mode
     return (0);
+  }
+  void R_bit_on(){
+    Serial.println("D_space::R_bit_on");
+    step_cmd(); // change demo mode
   }
 };
 //
@@ -1355,13 +1362,14 @@ void loop()
     break;
   case 6: // g implies <>
     process_json();
-    loop_control.current_cmd_global = 3;
+    loop_control.current_cmd_global = 2;
     break;
   default:
     count(50);
     loop_control.current_cmd_global = 1; // default to rotate
     break;
   }
+
   // D_io_base->W_wordf(); // write and read all bytes ---BJD DEBUG - experimental
   // D_io_base->R_scan();
 
