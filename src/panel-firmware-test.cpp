@@ -45,6 +45,8 @@
 //  06/10/2025 - Release candidate for Demo 1
 //  06/10/2025 - changes post release candidate
 //  06/15/2025 - JSON changes decode properly, but fp register not set
+//  06/17/2025 - JSON works. Add register select
+//  06/20/2025 - define R_select objects for 5 registers
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -236,7 +238,7 @@ class D_button : public D_base
 public:
   D_bit *parent; // pointer to D_bit object
   int R_bit(int);
-  virtual void R_bit_on() {Serial.println("D_button::R_bit_on");};
+  virtual void R_bit_on() { Serial.println("D_button::R_bit_on"); };
   int BN_changed_bit(int j)
   {
     int temp;
@@ -250,20 +252,6 @@ public:
     Serial.print(" j = ");
     Serial.print(j);
 
-    //   //  state machine for switch push/release
-    //   switch (button_value) // switch on state of button
-    //   {
-    //   case 0: // LED is off
-    //     break;
-    //   case 1: // LED is on
-    //     break;
-    //   case 2: // transition state
-    //     break;
-    //   default:
-    //     button_value = 0;
-    //     break;
-    //   }
-    // }
     if (j == 0)
     { // process Switch ON events only (ignore OFF)
       if (button_value == 0)
@@ -271,7 +259,7 @@ public:
         // LED was OFF, turn it on
         Serial.println("ON");
         button_value = 1; // set switch state to ON
-        Serial.print("D_button BN_changed_bit NEW\n");
+        Serial.print("D_button BN_changed_bit \n");
         parent->W_bit(0, 1);
         R_bit_on();
       }
@@ -280,31 +268,12 @@ public:
         // LED was ON, turn it off
         Serial.println("OFF");
         button_value = 0; // set switch statte to OFF
-        Serial.print("D_button BN_changed_bit NEW\n");
+        Serial.print("D_button BN_changed_bit \n");
         parent->W_bit(0, 0);
       }
     }
     return (0);
   }
-  //   if (j == 0)
-  //   {
-
-  //     // if ((button_value & 2) == 0)
-  //     if (temp == 0)
-  //     {
-  //       Serial.println("ON");
-  //       Serial.print("D_button BN_changed_bit NEW\n");
-  //       parent->W_bit(0, 1);
-  //     } // Write output bit via byte
-  //   }
-  //   else
-  //   {
-  //     Serial.println("OFF");
-  //     //        parent->R_bit(changed_in); // BJD DEBUG
-  //     parent->W_bit(0, 0); // Write output bit via byte
-  //   }
-  //   return (0);
-  // };
 
 private:
 };
@@ -326,7 +295,6 @@ public:
    */
   D_bit *regptr[32];
   /** size - number of bits in front panel reg (16) */
-  /** size - normally 16 bits (unless testing). */
   int size;
   /** register current contents */
   long value;     // current register value
@@ -414,11 +382,57 @@ public:
     //   step_cmd(); // change demo mode
     return (0);
   }
-  void R_bit_on(){
+  void R_bit_on()
+  {
     Serial.println("D_space::R_bit_on");
     step_cmd(); // change demo mode
   }
 };
+
+//
+/** @brief class R_select defines one register select button.
+ * (A, B, X, P ...)
+ * In includes methods to act on one button or the group.
+ */
+class R_select : public D_button
+{
+public:
+  R_select() {}; // initialize statics
+  R_select(D_bit *bin, char *in)
+  {
+       Serial.println("R_select constructor");
+    parent = bin; // save parent D_bit object
+    reg_select[reg_max++] = this; // save pointer to this object
+    value = 0;  // set register value to 0
+    D_reg_bitno = 0;  //
+    name = in; // strcpy(in,name);  // save name
+  };
+
+  int display_me();         // set this register to be displayed
+  int parse_json(char *in); // extract register values from json
+  char *create_json();      // create json text msg
+
+  static R_select *reg_select[6]; // pointer to select buttons
+  static int reg_max;           // number of registers
+  static R_select *selected_reg; // displayed register
+  int value;                           // value of this register
+  char *name;  // register name for json
+  int R_bit(int in)
+  {
+    Serial.print("R_select::R_bit ");
+    // // button_value++;            // set light on
+    // Serial.print("DEMO MODE"); // printable name
+    // Serial.print(" ");
+    Serial.println(name); // printable name
+    return (0);
+  }
+  private:                    // name of this register
+};
+
+int R_select::reg_max = 0; // initialize
+R_select* R_select::reg_select[6]; //
+R_select* r_sel_ptr;  // debug
+
 //
 /** @brief class usbio provides keyboard input from the host computer.
  * This is not a very sophisticatd class.
@@ -458,6 +472,7 @@ static usbio usbio2; // i/o via USB to FrontPanelH316.c
 D_reg *fp_dreg;
 D_base *fp_clear; // clear button object
 D_base *fp_ss1;   // ss1 switch
+D_base *fp_rsel;  // last register select switch
 /** Random, uncategorized multi-line comment in D_io construct
  * or method.
  */
@@ -663,8 +678,8 @@ int D_byte::R_find_changes()
       {
 
         // D_bits[i]->D_reg_bitno;  // this bit was changed  NOOP
-        D_bits[i]->R_bit(changed_in);                       // BJD DEBUG
-                                                            //     D_bits[i]->W_bit(i, 1);       // Write output bit via byte
+        D_bits[i]->R_bit(changed_in); // BJD DEBUG
+        //     D_bits[i]->W_bit(i, 1);       // Write output bit via byte (old code)
         D_bits[i]->W_bit(i, (data_in & (D_bits[i]->mask))); // Write output bit via byte
 
         D_bits[i]->R_changed_bit(0); // update registers/buttons using this bit BJD
@@ -733,15 +748,6 @@ int D_button::R_bit(int in)
   Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
   Serial.println(in, HEX);
-
-  // Serial.print(" ");
-  // Serial.println(D_reg_bitno);
-
-  // temp = 0x10000 >> D_reg_bitno;  // note oddball bit position
-  // temp = 1 << (D_reg_link->size-D_reg_bitno); // bit no ------------------------xxx BJD
-  // D_reg_link->value |= temp;  // update value
-  // W_bit(D_reg_bitno,1); // update bit to be output
-
   return (0); // return bit mask in the byte
 }
 
@@ -899,8 +905,8 @@ void process_json()
 {
   Serial.println("enter process_json");
   fp_dreg->value = status_A(usbio2.in_string());
-  //fp_dreg->D_reg_write_word(fp_dreg->value);
- // D_io_base->W_wordf(); // write and read all bytes
+  // fp_dreg->D_reg_write_word(fp_dreg->value);
+  // D_io_base->W_wordf(); // write and read all bytes
   Serial.println(fp_dreg->value);
   //  loop_control.current_cmd_global = 3; // set to display register
   //
@@ -954,6 +960,8 @@ end:
 static D_io *D_io_base;
 D_byte *dbyte_save;
 D_bit *dbit_save;
+// int R_select::reg_max = 0;  //
+// R_select*  R_select::*reg_select[6];// ??
 //
 // D_reg *fp_dreg;
 // D_base *fp_clear; // clear button object
@@ -1042,20 +1050,9 @@ void setup()
 
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
   fp_clear = dbit_save->D_reg_link = new D_clear(dbit_save, (char *)"CLR");
-  //   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  // fp_clear = dbit_save->D_reg_link = new (dbit_save, "SS3");
-  //   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  // fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, "SS2");
-  // dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  // fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, "SS1");
-
-//
-
-/***  conditional compile - 32 bit register vs. active bottom row of buttons */
-#define testnow
-#ifdef testnow
-
+  //
   //  define sense switches
+  //
   dbyte_save = D_io_base->make(&xwire1, 0x20, 1); // make one i/o expander
                                                   //      (on SDA, SCL = ,5)(20,22,24,26)
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
@@ -1068,23 +1065,25 @@ void setup()
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SS4");
 
   // define register-select "radio buttons" for A, B, OP, P/Y
+
   dbyte_save = D_io_base->make(&xwire1, 0x24, 0); // i2c addr of i/o expander chip
                                                   //      (on SDA, SCL = ,5)(20,22,24,26)
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"A-reg");
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"B-reg");
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"OP");
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"P/Y");
 
-  //  define "radio buttons" for M
-  //  define Master Clear, Fetch, P+1
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
+  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"A");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
+  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"B");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
+  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"OP");
+  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
+  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"P/Y");
 
   dbyte_save = D_io_base->make(&xwire1, 0x22, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"M-reg");
+  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"M-reg");
+
+  //  define action buttons
+  //  define Master Clear, Fetch, P+1
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
   fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"M-clear");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
@@ -1104,56 +1103,6 @@ void setup()
   fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Spare");
   //      (on SDA, SCL = ,5)
 
-#else
-
-  dbyte_save = D_io_base->make(&xwire1, 0x26); // make one i/o expander
-  //      (on SDA, SCL = ,5)(20,22,24,26)
-  //  define bits and add to front panel register   // bits labeled 1-4
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_dreg->D_reg_addbit(dbit_save);
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_dreg->D_reg_addbit(dbit_save);
-
-  dbyte_save = D_io_base->make(&xwire1, 0x22); // i2c addr of i/o expander chip
-  //      (on SDA, SCL = ,5)(20,22,24,26)
-  //  define bits and add to register   // bits labeled 5-8
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_dreg->D_reg_addbit(dbit_save);
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_dreg->D_reg_addbit(dbit_save);
-
-  dbyte_save = D_io_base->make(&xwire1, 0x24); // i2c addr of i/o expander chip
-  //      (on SDA, SCL = ,5)(20,22,24,26)
-  //  define bits and add to register   // bits labeled 9-12
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_dreg->D_reg_addbit(dbit_save);
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-  dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_dreg->D_reg_addbit(dbit_save);
-  dbyte_save = D_io_base->make(&xwire1, 0x20); // i2c addr of i/o expander chip
-//      (on SDA, SCL = ,5)
-
-// //  define bits and add to register   // bits 13-16
-// dbit_save = dbyte_save->mbit(dbyte_save,0x08);
-// fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-// dbit_save = dbyte_save->mbit(dbyte_save,0x04);
-// fp_dreg->D_reg_addbit(dbit_save);
-// dbit_save = dbyte_save->mbit(dbyte_save,0x02);
-// fp_dreg->D_reg_addbit(dbit_save); // add a D_bit to the front panel register
-// dbit_save = dbyte_save->mbit(dbyte_save,0x01);
-// fp_dreg->D_reg_addbit(dbit_save);
-#endif
   fp_dreg->D_reg_end_bits(); // update bit number after last bit added
 
   if (DEBUGX)
@@ -1239,7 +1188,7 @@ void display_register(unsigned long delay_time)
   // dbit_save->W_bit(1);
   fp_dreg->D_reg_write_word(fp_dreg->value);
 
-   D_io_base->W_wordf(); // write and read all bytes
+  D_io_base->W_wordf(); // write and read all bytes
 
   delay((unsigned long)2); // wait
 
@@ -1313,16 +1262,14 @@ void reboot()
 
 void loop()
 {
-  unsigned long mytime;
+  // unsigned long mytime;
   // mytime = millis();
-  // Serial.println(mytime);
-  // static int current_cmd;
-  // static int inChar;
-  // static unsigned long delay_time = 1000; // delay before continue loop
 
   // put your main code here, to run repeatedly:
-
+  //
   // the loop function runs over and over again forever
+  // the loop is entered many times - not just once
+  //
 
   loop_control.inChar = usbio2.in_char();
   if (loop_control.inChar != -1)
@@ -1331,7 +1278,7 @@ void loop()
     // Serial.println(current_cmd_global,HEX);
     loop_control.delay_time = 1000;
   }
-  switch (loop_control.current_cmd_global)
+  switch (loop_control.current_cmd_global) // add Loop Control Symbole BJD
   {
   case 0: // a
     count(loop_control.delay_time);
