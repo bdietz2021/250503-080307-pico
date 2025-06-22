@@ -206,27 +206,13 @@ public:
   // virtual int clear();  // reset value
   virtual int R_bit(int);
   virtual int W_bit(int, int) { return (0); };
-
+ /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
   virtual int BN_changed_bit(int j) //
   {
     Serial.print("D_base::BN_changed_bit: ");
-    // if (j == 0)
-    // {
-    //   Serial.println("ON");
-    //   if ((button_value & 2) == 0)
-    //   {
-    //     Serial.print("D_base::Gotcha\n");
-    //     //    parent->W_bit(0, 1);
-    //   } // Write output bit via byte
-    // }
-    // else
-    // {
-    //   Serial.println("OFF");
-    //   //        parent->R_bit(changed_in); // BJD DEBUG
-    //   //  parent->W_bit(0, 1); // Write output bit via byte
-    // }
     return (0);
-  };
+  }
+
 };
 
 //  class D_button - base class for all single button input
@@ -238,7 +224,8 @@ class D_button : public D_base
 public:
   D_bit *parent; // pointer to D_bit object
   int R_bit(int);
-  virtual void R_bit_on() { Serial.println("D_button::R_bit_on"); };
+ virtual void R_bit_on() { Serial.println("D_button::R_bit_on"); };
+ /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
   int BN_changed_bit(int j)
   {
     int temp;
@@ -274,7 +261,7 @@ public:
     }
     return (0);
   }
-
+  
 private:
 };
 //
@@ -384,7 +371,7 @@ public:
   }
   void R_bit_on()
   {
-    Serial.println("D_space::R_bit_on");
+    Serial.println("D_spare::R_bit_on");
     step_cmd(); // change demo mode
   }
 };
