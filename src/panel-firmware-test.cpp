@@ -47,6 +47,8 @@
 //  06/15/2025 - JSON changes decode properly, but fp register not set
 //  06/17/2025 - JSON works. Add register select
 //  06/20/2025 - define R_select objects for 5 registers
+//  06/23/2025 - refine R_select functionality
+//  06/25/2025 - more updates
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -85,7 +87,7 @@ using namespace std;
 arduino::MbedI2C xwire0(I2C_SDA, I2C_SCL);
 arduino::MbedI2C xwire1((uint8_t)6, (uint8_t)7);
 
-int status_A(const char *const monitor);
+int status_reg(const char *const monitor, char *reg_name);
 
 static int rev4[16] = {0x00, 0x08, 0x04, 0x0c, 0x02, 0x0a, 0x06, 0x0e,
                        0x01, 0x09, 0x05, 0x0d, 0x03, 0x0b, 0x07, 0x0f}; // reverse four bits msb/lsb (i/o expander oddity)
@@ -97,6 +99,7 @@ class D_bit;
 class D_base;
 class D_reg;
 int step_cmd(); //
+D_reg *fp_dreg; // define this early
 
 int xouch() // catistrophic error routing
 {
@@ -206,13 +209,12 @@ public:
   // virtual int clear();  // reset value
   virtual int R_bit(int);
   virtual int W_bit(int, int) { return (0); };
- /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
+  /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
   virtual int BN_changed_bit(int j) //
   {
-    Serial.print("D_base::BN_changed_bit: ");
+  //   Serial.print("D_base::BN_changed_bit: ");
     return (0);
   }
-
 };
 
 //  class D_button - base class for all single button input
@@ -224,44 +226,47 @@ class D_button : public D_base
 public:
   D_bit *parent; // pointer to D_bit object
   int R_bit(int);
- virtual void R_bit_on() { Serial.println("D_button::R_bit_on"); };
- /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
+  virtual void R_bit_on() { /* Serial.println("D_button::R_bit_on"); */ };
+  virtual void R_bit_off() { /* Serial.println("D_button::R_bit_off"); */ };
+  //
+  /** @brief - BN_changed_bit exists in both D_button, R_select,  and D_base. Beware.  */
   int BN_changed_bit(int j)
   {
-    int temp;
+    // int temp;
 
-    temp = parent->parent->R_bytef() & parent->mask; // get latest input bit value -- never zero
-    Serial.print("D_button::BN_changed_bit: ");
-    Serial.print("button_value = ");
-    Serial.print(button_value);
-    Serial.print(" data ");
-    Serial.print(temp, HEX);
-    Serial.print(" j = ");
-    Serial.print(j);
+   //  temp = parent->parent->R_bytef() & parent->mask; // get latest input bit value -- never zero
+    // Serial.print("D_button::BN_changed_bit: ");
+    // Serial.print("button_value = ");
+    // Serial.print(button_value);
+    // Serial.print(" data ");
+    // Serial.print(temp, HEX);
+    // Serial.print(" j = ");
+    // Serial.print(j);
 
     if (j == 0)
     { // process Switch ON events only (ignore OFF)
       if (button_value == 0)
       {
         // LED was OFF, turn it on
-        Serial.println("ON");
+        // Serial.println("ON");
         button_value = 1; // set switch state to ON
-        Serial.print("D_button BN_changed_bit \n");
-        parent->W_bit(0, 1);
+        // Serial.print("D_button BN_changed_bit \n");
+        parent->W_bit(0, 0);
         R_bit_on();
       }
       else
       {
         // LED was ON, turn it off
-        Serial.println("OFF");
+        // Serial.println("OFF");
         button_value = 0; // set switch statte to OFF
-        Serial.print("D_button BN_changed_bit \n");
-        parent->W_bit(0, 0);
+       //  Serial.print("D_button BN_changed_bit \n");
+        parent->W_bit(0, 1);
+        R_bit_off();
       }
     }
     return (0);
   }
-  
+
 private:
 };
 //
@@ -338,11 +343,11 @@ public:
   }
   int R_bit(int in)
   {
-    Serial.print("D_demo::R_bit ");
-    // button_value++;            // set light on
-    Serial.print("DEMO MODE"); // printable name
-    Serial.print(" ");
-    Serial.println(name); // printable name
+    // Serial.print("D_demo::R_bit ");
+    // // button_value++;            // set light on
+    // Serial.print("DEMO MODE"); // printable name
+    // Serial.print(" ");
+    // Serial.println(name); // printable name
     return (0);
   }
 };
@@ -387,38 +392,92 @@ public:
   R_select() {}; // initialize statics
   R_select(D_bit *bin, char *in)
   {
-       Serial.println("R_select constructor");
-    parent = bin; // save parent D_bit object
+    // this constructor adds this object to the static table of
+    // R_select objects.
+    Serial.println("R_select constructor");
+    parent = bin;                 // save parent D_bit object
     reg_select[reg_max++] = this; // save pointer to this object
-    value = 0;  // set register value to 0
-    D_reg_bitno = 0;  //
-    name = in; // strcpy(in,name);  // save name
+    selected_reg = this;          // default selected register
+    value = 0;                    // set register value to 0
+    D_reg_bitno = 0;              //
+    name = in;                    // strcpy(in,name);  // save name
   };
 
-  int display_me();         // set this register to be displayed
+  int display_current()
+  { // set this register to be displayed
+    fp_dreg->D_reg_write_word(selected_reg->value);
+    return 0;
+  };
+
   int parse_json(char *in); // extract register values from json
   char *create_json();      // create json text msg
 
   static R_select *reg_select[6]; // pointer to select buttons
-  static int reg_max;           // number of registers
-  static R_select *selected_reg; // displayed register
-  int value;                           // value of this register
-  char *name;  // register name for json
-  int R_bit(int in)
+  static int reg_max;             // number of registers
+  static R_select *selected_reg;  // displayed register
+                                  // int value;                  value is defined in D_base
+  char *name;                     // register name for json
+
+  /** @brief - BN_changed_bit exists in  D_button, R_select, and D_base. Beware.  */
+  int BN_changed_bit(int j) // this is the R_select version
   {
-    Serial.print("R_select::R_bit ");
-    // // button_value++;            // set light on
-    // Serial.print("DEMO MODE"); // printable name
-    // Serial.print(" ");
-    Serial.println(name); // printable name
+    if (j == 0)
+    { // process Switch ON events only (ignore OFF)
+
+      // LED was OFF, turn it on
+     // Serial.println("ON");
+      button_value = 1; // set switch state to ON
+     // Serial.print("R_select::BN_changed_bit \n");
+      // parent->W_bit(0, 0);
+      R_bit_on();
+      selected_reg = this; // save which register is selected
+      // Serial.print("R_select: register ");
+      // Serial.print(name);
+      // Serial.println(" selected");
+      // Serial.println(value);
+      fp_dreg->D_reg_write_word(value); // display contents
+    }
     return (0);
   }
-  private:                    // name of this register
+
+  //
+  //  select this register and display on front panel
+  //
+  virtual void R_bit_on()
+  {
+    int i;
+    // Serial.println("R_select::R_bit_on");
+    fp_dreg->D_reg_write_word(value); // set value
+    for (i = 0; i < reg_max; i++)
+    {
+      reg_select[i]->parent->W_bit(0, 0); // turn all R_select light off
+    };
+    parent->W_bit(0, 0); // turn selected regiter on
+  };
+  virtual void R_bit_off()
+  {
+  };
+  //
+  //
+  int R_bit(int in)
+  {
+    // Serial.print("R_select::R_bit ");
+    // // // button_value++;            // set light on
+    // // Serial.print("DEMO MODE"); // printable name
+    // // Serial.print(" ");
+    // Serial.println(name); // printable name
+    return (0);
+  }
+
+private: // name of this register
 };
 
-int R_select::reg_max = 0; // initialize
-R_select* R_select::reg_select[6]; //
-R_select* r_sel_ptr;  // debug
+//  outside of objects -- initialize static variables in R_select
+
+int R_select::reg_max = 0;               // initialize
+R_select *R_select::reg_select[6];       //
+R_select *r_sel_ptr;                     // debug
+R_select *R_select::selected_reg = NULL; // initialize
 
 //
 /** @brief class usbio provides keyboard input from the host computer.
@@ -445,6 +504,14 @@ private:
 class lcontrol
 {
 public:
+#define LOOP_0_count 0
+#define LOOP_1_rotate 1
+#define LOOP_2_display 2
+#define LOOP_3_clear 3
+#define LOOP_4_save 4
+#define LOOP_5_reboot 5
+#define LOOP_6_json 6
+
   int current_cmd_global;
   int current_cmd;
   int inChar;
@@ -456,10 +523,16 @@ private:
 /********************* end of class definitions ******************/
 
 static usbio usbio2; // i/o via USB to FrontPanelH316.c
-D_reg *fp_dreg;
-D_base *fp_clear; // clear button object
-D_base *fp_ss1;   // ss1 switch
-D_base *fp_rsel;  // last register select switch
+// D_reg *fp_dreg;
+D_base *fp_clear;  // clear button object
+D_base *fp_ss1;    // ss1 switch
+D_base *fp_rsel;   // last register select switch
+D_base *fp_rsel_A; // register select A object
+D_base *fp_rsel_B;
+D_base *fp_rsel_OP;
+D_base *fp_rsel_PY;
+D_base *fp_rsel_M;
+
 /** Random, uncategorized multi-line comment in D_io construct
  * or method.
  */
@@ -500,8 +573,8 @@ void D_byte::W_byte(int addmask, int data_outx)
   data_out = (data_out & (~addmask)) | (data_outx & addmask); // update saved value
   if (debug_flag)
   {
-    Serial.print("W_byte: ");
-    Serial.println(data_out, HEX);
+    // Serial.print("W_byte: ");
+    // Serial.println(data_out, HEX);
   };
   change_flag++;
 };
@@ -554,14 +627,14 @@ void D_byte::W_bytef()
     work = defined_bits;
     changed_in = rev4[changed_in] & work; // reverse bits to match input bit order
 
-    Serial.print("W_bytef: in/prev/changed: ");
-    Serial.print(i2caddr, HEX);
-    Serial.print(" ");
-    Serial.print(data_in, HEX);
-    Serial.print(" ");
-    Serial.print(previous_in, HEX);
-    Serial.print(" ");
-    Serial.println(changed_in, HEX);
+    // Serial.print("W_bytef: in/prev/changed: ");
+    // Serial.print(i2caddr, HEX);
+    // Serial.print(" ");
+    // Serial.print(data_in, HEX);
+    // Serial.print(" ");
+    // Serial.print(previous_in, HEX);
+    // Serial.print(" ");
+    // Serial.println(changed_in, HEX);
   }
   // Serial.print("W_bytef read data:");
   // Serial.println(data_in,HEX);
@@ -712,10 +785,10 @@ int D_reg::R_bit(int bitno)
 { // set/reset bit in i/o expander sw object
   int temp;
 
-  Serial.print("D_reg::R_bit: ");
-  Serial.print((long unsigned int)this, HEX);
-  Serial.print(" ");
-  Serial.println(bitno, HEX);
+  // Serial.print("D_reg::R_bit: ");
+  // Serial.print((long unsigned int)this, HEX);
+  // Serial.print(" ");
+  // Serial.println(bitno, HEX);
 
   // temp = 0x10000 >> D_reg_bitno;  // note oddball bit position
   // temp = 1 << (size-bitno); // bit no
@@ -760,7 +833,7 @@ int D_bit::R_changed_bit(int data)
 { // experimental update fp register
   int i;
   i = parent->R_bytef() & mask; // find - changed to 0 or 1?
-  Serial.println("D_bit::R_changed_bit ");
+  // Serial.println("D_bit::R_changed_bit ");
   D_reg_link->BN_changed_bit(i); // notify the register or button object
   return (0);
 };
@@ -853,9 +926,9 @@ int usbio::in_char()
 
     // Serial.print("usbio::in_char  ");
     // Serial.println((int) inCharx,HEX);
-    if (inCharx == 0x3c)
+    if (inCharx == '<')
     { // < means start string
-      while ((inCharx = Serial.read()) != 0x3e)
+      while ((inCharx = Serial.read()) != '>')
       {
         if (inCharx > 0)
         {
@@ -866,7 +939,7 @@ int usbio::in_char()
 
       Serial.print("<string> ");
       Serial.println(buff);
-      return (0x67); // key for case statement
+      return ('g'); // key for case statement
     }
     // not start of string
     if ((inCharx >= 0x41) && (inCharx <= 0x7a))
@@ -886,27 +959,55 @@ char *usbio::in_string()
 };
 
 /** @brief process a json command enclosed in <>
- * <{"name":"H316 Front Panel Status","A":668}> (test data)
+ * <{"name":"H316 Front Panel Status","A":668,"B":1024}> (test data)
  */
 void process_json()
 {
-  Serial.println("enter process_json");
-  fp_dreg->value = status_A(usbio2.in_string());
-  // fp_dreg->D_reg_write_word(fp_dreg->value);
-  // D_io_base->W_wordf(); // write and read all bytes
-  Serial.println(fp_dreg->value);
-  //  loop_control.current_cmd_global = 3; // set to display register
+  int temp;
+  char *inputx = usbio2.in_string();
+  temp = status_reg(inputx, (char *)"A");
+  if (temp >= 0)
+  {
+    fp_dreg->value = temp;
+    fp_rsel_A->value = temp; //
+    fp_dreg->D_reg_write_word(temp);
+  };
   //
+  temp = status_reg(inputx, (char *)"B");
+  if (temp >= 0)
+  {
+    fp_rsel_B->value = temp; //
+  };
+  //
+  temp = status_reg(inputx, (char *)"OP");
+  if (temp >= 0)
+  {
+    fp_rsel_OP->value = temp; //
+  };
+  //
+  temp = status_reg(inputx, (char *)"P/Y");
+  if (temp >= 0)
+  {
+    fp_rsel_PY->value = temp; //
+  };
+  //
+  temp = status_reg(inputx, (char *)"M-reg");
+  if (temp >= 0)
+  {
+    fp_rsel_M->value = temp; //
+  };
+  R_select *tempptr = (R_select *)fp_rsel_A;
+  tempptr->display_current(); // update front panel reg
 };
 
 /** @brief: process json command to set A register
  *
  */
-int status_A(const char *const monitor)
+int status_reg(const char *const monitor, char *reg_name)
 {
   const cJSON *a_ptr = NULL;
   const cJSON *name = NULL;
-  int status = 0;
+  int status = -1;
 
   cJSON *monitor_json = cJSON_Parse(monitor);
   if (monitor_json == NULL)
@@ -916,7 +1017,7 @@ int status_A(const char *const monitor)
     {
       fprintf(stderr, "Error before: %s\n", error_ptr);
     }
-    status = 0;
+    status = -1;
     goto end;
   }
 
@@ -926,7 +1027,7 @@ int status_A(const char *const monitor)
     printf("Checking monitor \"%s\"\n", name->valuestring);
   }
 
-  a_ptr = cJSON_GetObjectItemCaseSensitive(monitor_json, "A");
+  a_ptr = cJSON_GetObjectItemCaseSensitive(monitor_json, reg_name);
   if (cJSON_IsNumber(a_ptr))
   {
     status = a_ptr->valuedouble;
@@ -935,6 +1036,10 @@ int status_A(const char *const monitor)
 
 end:
   cJSON_Delete(monitor_json);
+  // Serial.print("json values ");
+  // Serial.print(status);
+  // Serial.print(reg_name);
+  // Serial.println();
   return status;
 };
 
@@ -1057,17 +1162,17 @@ void setup()
                                                   //      (on SDA, SCL = ,5)(20,22,24,26)
 
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"A");
+  fp_rsel_A = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"A");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"B");
+  fp_rsel_B = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"B");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"OP");
+  fp_rsel_OP = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"OP");
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"P/Y");
+  fp_rsel_PY = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"P/Y");
 
   dbyte_save = D_io_base->make(&xwire1, 0x22, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_rsel = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"M-reg");
+  fp_rsel_M = dbit_save->D_reg_link = new R_select(dbit_save, (char *)"M-reg");
 
   //  define action buttons
   //  define Master Clear, Fetch, P+1
@@ -1211,8 +1316,8 @@ void clear_register()
 int step_cmd()
 { // advance to the next command
   loop_control.current_cmd_global++;
-  if (loop_control.current_cmd_global > 2)
-    loop_control.current_cmd_global = 0;
+  if (loop_control.current_cmd_global > LOOP_2_display)
+    loop_control.current_cmd_global = LOOP_0_count;
   Serial.print("Changed demo command mode: ");
   Serial.println(loop_control.current_cmd_global);
   fp_dreg->D_reg_write_word(0xffff);
@@ -1223,21 +1328,15 @@ int step_cmd()
   return (0);
 }
 
+//  decode commands from console (for test)
 int command(int i)
 {
   int return_value;
-  if (1)
-    Serial.print("command: from USB - ");
-  if (1)
-    Serial.println(i, HEX);
-  // if (i == 0x03c) {
-  //   /*. add here */
-
-  // }
-  // else {
-  return_value = (i - 0x61);
-  // }
-
+  // if (1)
+  //   Serial.print("command: from USB - ");
+  // if (1)
+  //   Serial.println(i, HEX);
+  return_value = (i - 'a');
   return (return_value);
 }
 
@@ -1267,40 +1366,40 @@ void loop()
   }
   switch (loop_control.current_cmd_global) // add Loop Control Symbole BJD
   {
-  case 0: // a
+  case LOOP_0_count: // a
     count(loop_control.delay_time);
     if (usbio2.in_available() > 0)
       loop_control.delay_time = 50;
     else
       loop_control.delay_time = 1000;
     break;
-  case 1: // b
+  case LOOP_1_rotate: // b
     rotate(loop_control.delay_time);
     // if (usbio2.in_available() > 0) delay_time = 50; else delay_time = 1000;
     loop_control.delay_time = 100;
     break;
-  case 2: // c
+  case LOOP_2_display: // c
     display_register(loop_control.delay_time);
     break;
-  case 3: // d
+  case LOOP_3_clear: // d
     clear_register();
-    loop_control.current_cmd_global = 2; // back to display registeer
+    loop_control.current_cmd_global = LOOP_2_display; // back to display registeer
     break;
-  case 4: // e
+  case LOOP_4_save: // e
     save_register();
-    loop_control.current_cmd_global = 2; // back to display register
+    loop_control.current_cmd_global = LOOP_2_display; // back to display register
     break;
-  case 5:     // f
-    reboot(); // force reboot via wdt
+  case LOOP_5_reboot: // f
+    reboot();         // force reboot via wdt
     delay(9000);
     break;
-  case 6: // g implies <>
+  case LOOP_6_json: // g implies <>
     process_json();
-    loop_control.current_cmd_global = 2;
+    loop_control.current_cmd_global = LOOP_2_display;
     break;
   default:
     count(50);
-    loop_control.current_cmd_global = 1; // default to rotate
+    loop_control.current_cmd_global = LOOP_1_rotate; // default to rotate
     break;
   }
 
