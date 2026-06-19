@@ -49,6 +49,9 @@
 //  06/20/2025 - define R_select objects for 5 registers
 //  06/23/2025 - refine R_select functionality
 //  06/25/2025 - more updates
+//  06/09/2026 - works for demo case 1 - output from h316
+//  06/09/2026 - Add code for input to h316
+//  06/14/2026 - more input
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -228,6 +231,9 @@ public:
   int R_bit(int);
   virtual void R_bit_on() { /* Serial.println("D_button::R_bit_on"); */ };
   virtual void R_bit_off() { /* Serial.println("D_button::R_bit_off"); */ };
+
+  int count = 0;  // temp variable
+  char jsonbuf[256]; // temp
   //
   /** @brief - BN_changed_bit exists in both D_button, R_select,  and D_base. Beware.  */
   int BN_changed_bit(int j)
@@ -340,6 +346,7 @@ public:
     Serial.println("D_demo constructor");
     name = namex;
     button_value = 0; // clear/set off
+    count = 0;
   }
   int R_bit(int in)
   {
@@ -372,6 +379,12 @@ public:
     Serial.print(" ");
     // if ((button_value & 2) == 0)
     //   step_cmd(); // change demo mode
+    // create JSON message to send to h316 frontpanelh316
+    count++;
+    // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
+    sprintf(jsonbuf, "<{\"B_Run\":%d}>", count);
+    Serial.print(jsonbuf);
+    Serial.print("\n");
     return (0);
   }
   void R_bit_on()
