@@ -1,0 +1,8 @@
+#   file-copy - 06/08/2026 - copy files from newmini vsedit to H316
+#   bdietz@NewMini frontpanel % rsync FrontPanelH316.c bdietz@h316.local:/home/bdietz/gitrep/simh-h316/frontpanel
+#
+rsync ~/Public/firmware.uf2 bdietz@h316.local:/home/bdietz
+#
+echo "done"
+
+
