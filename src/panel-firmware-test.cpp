@@ -52,6 +52,9 @@
 //  06/09/2026 - works for demo case 1 - output from h316
 //  06/09/2026 - Add code for input to h316
 //  06/14/2026 - more input
+//  06/19/2026 - pushed to github 2026-june branch
+//  06/22/2026 - add virtual json_send() member function
+//  07/08/2026 - start adding button code
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -207,11 +210,26 @@ public:
   long old_value; // previous value
   int D_reg_bitno;
   int button_value; // 0 = off, nz = on
+  int count = 0;  // temp variable
+  char jsonbuf[256]; // temp
   D_base *D_reg_link;
   // virtual int action(); // execute when the bit changes
   // virtual int clear();  // reset value
   virtual int R_bit(int);
   virtual int W_bit(int, int) { return (0); };
+  //
+  virtual void json_send()
+  {
+    // create JSON message to send to h316 frontpanelh316
+
+    // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
+    count++;
+    Serial.println("D_base virtual function");
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
+    Serial.print(jsonbuf);
+    Serial.print("\n");
+  }
+
   /** @brief - BN_changed_bit exists in both D_button and D_base. Beware.  */
   virtual int BN_changed_bit(int j) //
   {
@@ -232,8 +250,6 @@ public:
   virtual void R_bit_on() { /* Serial.println("D_button::R_bit_on"); */ };
   virtual void R_bit_off() { /* Serial.println("D_button::R_bit_off"); */ };
 
-  int count = 0;  // temp variable
-  char jsonbuf[256]; // temp
   //
   /** @brief - BN_changed_bit exists in both D_button, R_select,  and D_base. Beware.  */
   int BN_changed_bit(int j)
@@ -348,6 +364,19 @@ public:
     button_value = 0; // clear/set off
     count = 0;
   }
+
+virtual void json_send() override
+  {
+    // create JSON message to send to h316 frontpanelh316
+
+    // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
+    count++;
+    Serial.println("D_demo virtual function");
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
+    Serial.print(jsonbuf);
+    Serial.print("\n");
+  }
+
   int R_bit(int in)
   {
     // Serial.print("D_demo::R_bit ");
@@ -355,6 +384,7 @@ public:
     // Serial.print("DEMO MODE"); // printable name
     // Serial.print(" ");
     // Serial.println(name); // printable name
+    json_send();
     return (0);
   }
 };
@@ -369,6 +399,19 @@ public:
     name = namex;
     button_value = 0; // clear/set off
   }
+
+virtual void json_send() override
+  {
+    // create JSON message to send to h316 frontpanelh316
+
+    // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
+    count++;
+    Serial.println("D_spare virtual function");
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
+    Serial.print(jsonbuf);
+    Serial.print("\n");
+  }
+
   int R_bit(int in)
   {
     Serial.print("D_spare::R_bit ");
@@ -379,21 +422,16 @@ public:
     Serial.print(" ");
     // if ((button_value & 2) == 0)
     //   step_cmd(); // change demo mode
-    // create JSON message to send to h316 frontpanelh316
-    count++;
-    // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
-    sprintf(jsonbuf, "<{\"B_Run\":%d}>", count);
-    Serial.print(jsonbuf);
-    Serial.print("\n");
+   // json_send();
     return (0);
   }
   void R_bit_on()
   {
     Serial.println("D_spare::R_bit_on");
-    step_cmd(); // change demo mode
+    //step_cmd(); // change demo mode
+    json_send(); // changed 7/9/2026 
   }
 };
-
 //
 /** @brief class R_select defines one register select button.
  * (A, B, X, P ...)
@@ -722,6 +760,7 @@ int D_base::R_bit(int in)
   Serial.print((long unsigned int)this, HEX);
   Serial.print(" ");
   Serial.println(in, HEX);
+  json_send(); // do this if not redefined
   return (0);
 };
 
@@ -1092,7 +1131,7 @@ void setup()
   {
     while (Serial.available() <= 0)
       delay((unsigned long)10);
-    Serial.println("\nPanel Test 03/27/2025 - enter anything");
+    Serial.println("\nPanel Test 06/20/2026 - enter anything");
     Serial.read();
   }
   D_io_base = new D_io;  // base of all i/o expander i/o
@@ -1199,13 +1238,13 @@ void setup()
   //  define MA/Run/ Start ..
   dbyte_save = D_io_base->make(&xwire1, 0x26, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/Fetch/");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA"); // set MA mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/SI/RUN");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SI"); // set SI mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"Start");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"RUN");  // set RUN mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Spare");
+  fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Start"); // do MA or SI or RUN
   //      (on SDA, SCL = ,5)
 
   fp_dreg->D_reg_end_bits(); // update bit number after last bit added
@@ -1217,12 +1256,7 @@ void setup()
     Serial.println("\nPanel Test - enter anything 2 start");
     Serial.read();
   }
-  // test json
-  // char xstringL = '"{"name":"H316 Front Panel Status","A":668}"';
-  // char *xstring = &xstringL;
-  // printf(xstring);
-  // int itemp = status_A(xstring);
-  // printf("\nreturn A = %o\n", itemp);
+
 }
 
 /********************************* counter display pattern *************************/
