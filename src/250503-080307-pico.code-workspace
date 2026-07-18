@@ -4,5 +4,31 @@
 			"path": ".."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"mstd_iterator": "cpp",
+			"*.x": "cpp",
+			"array": "cpp",
+			"atomic": "cpp",
+			"bit": "cpp",
+			"deque": "cpp",
+			"forward_list": "cpp",
+			"list": "cpp",
+			"string": "cpp",
+			"vector": "cpp",
+			"algorithm": "cpp",
+			"memory_resource": "cpp",
+			"string_view": "cpp",
+			"memory": "cpp",
+			"random": "cpp",
+			"fstream": "cpp",
+			"initializer_list": "cpp",
+			"sstream": "cpp",
+			"stdexcept": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"new": "cpp"
+		}
+	}
 }

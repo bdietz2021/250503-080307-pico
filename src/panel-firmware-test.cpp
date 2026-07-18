@@ -54,6 +54,7 @@
 //  06/14/2026 - more input
 //  06/19/2026 - pushed to github 2026-june branch
 //  06/22/2026 - add virtual json_send() member function
+//  07/08/2026 - start adding button code
 //
 /****** for H316 front panel board 3/2024. ******/
 //  sixteen register bit top row
@@ -224,7 +225,7 @@ public:
     // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
     count++;
     Serial.println("D_base virtual function");
-    sprintf(jsonbuf, "<{\"%s\":%d}>", name, count);
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
     Serial.print(jsonbuf);
     Serial.print("\n");
   }
@@ -371,7 +372,7 @@ virtual void json_send() override
     // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
     count++;
     Serial.println("D_demo virtual function");
-    sprintf(jsonbuf, "<{\"%s\":%d}>", name, count);
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
     Serial.print(jsonbuf);
     Serial.print("\n");
   }
@@ -406,7 +407,7 @@ virtual void json_send() override
     // sprintf(jsonbuf, "<{\"A\":%d,\"B\":%d,\"M-reg\":%d,\"P/Y\":%d}>", A, B, X, P);
     count++;
     Serial.println("D_spare virtual function");
-    sprintf(jsonbuf, "<{\"%s\":%d}>", name, count);
+    sprintf(jsonbuf, "<{\"%s\":%d}>", name, button_value);
     Serial.print(jsonbuf);
     Serial.print("\n");
   }
@@ -421,13 +422,14 @@ virtual void json_send() override
     Serial.print(" ");
     // if ((button_value & 2) == 0)
     //   step_cmd(); // change demo mode
-    json_send();
+   // json_send();
     return (0);
   }
   void R_bit_on()
   {
     Serial.println("D_spare::R_bit_on");
-    step_cmd(); // change demo mode
+    //step_cmd(); // change demo mode
+    json_send(); // changed 7/9/2026 
   }
 };
 //
@@ -1236,13 +1238,13 @@ void setup()
   //  define MA/Run/ Start ..
   dbyte_save = D_io_base->make(&xwire1, 0x26, 0); // i2c addr of i/o expander chip
   dbit_save = dbyte_save->mbit(dbyte_save, 0x01);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/Fetch/");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA"); // set MA mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x02);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"MA/SI/RUN");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"SI"); // set SI mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x04);
-  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"Start");
+  fp_clear = dbit_save->D_reg_link = new D_demo(dbit_save, (char *)"RUN");  // set RUN mode
   dbit_save = dbyte_save->mbit(dbyte_save, 0x08);
-  fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Spare");
+  fp_clear = dbit_save->D_reg_link = new D_spare(dbit_save, (char *)"Start"); // do MA or SI or RUN
   //      (on SDA, SCL = ,5)
 
   fp_dreg->D_reg_end_bits(); // update bit number after last bit added
